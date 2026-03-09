@@ -1,4 +1,4 @@
-pip"""
+"""
 Main Controller for Intrusion Detection System
 Connects all modules together
 """
