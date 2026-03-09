@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Traffic — IDS Dashboard{% endblock %}
+{% block page_title %}Traffic Monitor{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+    <div class="col-xl-4 col-md-6">
+        <div class="card stat-card border-start-info">
+            <div class="card-body">
+                <div class="stat-label">Total Packets</div>
+                <div class="stat-value" id="trafTotalPkts">0</div>
+            </div>
+            <div class="stat-icon"><i class="bi bi-box-seam"></i></div>
+        </div>
+    </div>
+    <div class="col-xl-4 col-md-6">
+        <div class="card stat-card border-start-primary">
+            <div class="card-body">
+                <div class="stat-label">TCP Packets</div>
+                <div class="stat-value" id="trafTcp">0</div>
+            </div>
+            <div class="stat-icon"><i class="bi bi-arrow-left-right"></i></div>
+        </div>
+    </div>
+    <div class="col-xl-4 col-md-12">
+        <div class="card stat-card border-start-warning">
+            <div class="card-body">
+                <div class="stat-label">UDP Packets</div>
+                <div class="stat-value" id="trafUdp">0</div>
+            </div>
+            <div class="stat-icon"><i class="bi bi-broadcast"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-bar-chart me-2"></i>Traffic Volume Over Time</div>
+            <div class="card-body chart-container">
+                <canvas id="trafficLineChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-pie-chart me-2"></i>Protocol Breakdown</div>
+            <div class="card-body chart-container">
+                <canvas id="protocolDoughnut"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-bar-chart-steps me-2"></i>Protocol Comparison</div>
+            <div class="card-body chart-container">
+                <canvas id="protocolBar"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const PROTO_COLORS = {TCP:'#0dcaf0', UDP:'#ffc107', ICMP:'#198754', OTHER:'#6c757d'};
+
+    // ---- Traffic line chart ----
+    const lineCtx = document.getElementById('trafficLineChart').getContext('2d');
+    const trafficLineChart = new Chart(lineCtx, {
+        type: 'line',
+        data: { labels: [], datasets: [{
+            label: 'Packets',
+            data: [],
+            borderColor: '#0dcaf0',
+            backgroundColor: 'rgba(13,202,240,0.1)',
+            fill: true, tension: 0.3
+        }]},
+        options: { responsive: true, maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, grid:{color:'#333'} }, x: { grid:{color:'#222'} } },
+            plugins: { legend:{display:false} }
+        }
+    });
+
+    // ---- Protocol doughnut ----
+    const doughCtx = document.getElementById('protocolDoughnut').getContext('2d');
+    const protocolDoughnut = new Chart(doughCtx, {
+        type: 'doughnut',
+        data: { labels: [], datasets: [{ data: [], backgroundColor: [] }] },
+        options: { responsive: true, maintainAspectRatio: false,
+            plugins:{ legend:{ position:'bottom', labels:{color:'#ccc'} } }
+        }
+    });
+
+    // ---- Protocol bar chart ----
+    const barCtx = document.getElementById('protocolBar').getContext('2d');
+    const protocolBar = new Chart(barCtx, {
+        type: 'bar',
+        data: { labels: [], datasets: [{ label: 'Packets', data: [], backgroundColor: [] }] },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            scales: { x: { beginAtZero: true, grid:{color:'#333'} }, y: { grid:{display:false} } },
+            plugins: { legend:{display:false} }
+        }
+    });
+
+    function fetchTraffic() {
+        fetch('/api/traffic').then(r => r.json()).then(d => {
+            // stat cards
+            document.getElementById('trafTotalPkts').textContent = d.total_packets.toLocaleString();
+            const proto = d.protocol_distribution || {};
+            document.getElementById('trafTcp').textContent = (proto.TCP||0).toLocaleString();
+            document.getElementById('trafUdp').textContent = (proto.UDP||0).toLocaleString();
+
+            // line chart
+            const snaps = d.traffic_snapshots || [];
+            trafficLineChart.data.labels = snaps.map(s => s[0]);
+            trafficLineChart.data.datasets[0].data = snaps.map(s => s[1]);
+            trafficLineChart.update();
+
+            // protocol charts
+            const labels = Object.keys(proto);
+            const values = Object.values(proto);
+            const colors = labels.map(l => PROTO_COLORS[l] || '#6c757d');
+
+            protocolDoughnut.data.labels = labels;
+            protocolDoughnut.data.datasets[0].data = values;
+            protocolDoughnut.data.datasets[0].backgroundColor = colors;
+            protocolDoughnut.update();
+
+            protocolBar.data.labels = labels;
+            protocolBar.data.datasets[0].data = values;
+            protocolBar.data.datasets[0].backgroundColor = colors;
+            protocolBar.update();
+        });
+    }
+
+    fetchTraffic();
+    setInterval(fetchTraffic, 3000);
+</script>
+{% endblock %}

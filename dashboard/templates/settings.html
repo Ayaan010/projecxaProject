@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Settings — IDS Dashboard{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+<form id="settingsForm">
+    <!-- Rule Engine -->
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-sliders me-2"></i>Rule Engine Thresholds</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Port Scan Threshold</label>
+                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                           name="PORT_SCAN_THRESHOLD" value="{{ config.get('PORT_SCAN_THRESHOLD', 15) }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Brute Force Threshold</label>
+                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                           name="BRUTE_FORCE_THRESHOLD" value="{{ config.get('BRUTE_FORCE_THRESHOLD', 10) }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Time Window (seconds)</label>
+                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                           name="TIME_WINDOW" value="{{ config.get('TIME_WINDOW', 10) }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anomaly Engine -->
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-activity me-2"></i>Anomaly Detection</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Packet Rate Threshold</label>
+                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                           name="PACKET_RATE_THRESHOLD" value="{{ config.get('PACKET_RATE_THRESHOLD', 100) }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Traffic Time Window (s)</label>
+                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                           name="TRAFFIC_TIME_WINDOW" value="{{ config.get('TRAFFIC_TIME_WINDOW', 5) }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Large Packet Size (bytes)</label>
+                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                           name="LARGE_PACKET_SIZE" value="{{ config.get('LARGE_PACKET_SIZE', 1500) }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance -->
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-cpu me-2"></i>Performance</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Max Tracked IPs</label>
+                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                           name="MAX_TRACKED_IPS" value="{{ config.get('MAX_TRACKED_IPS', 10000) }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Cleanup Interval (s)</label>
+                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                           name="CLEANUP_INTERVAL" value="{{ config.get('CLEANUP_INTERVAL', 60) }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toggles -->
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-toggles me-2"></i>Flags</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="ENABLE_CONSOLE_ALERTS"
+                               {% if config.get('ENABLE_CONSOLE_ALERTS', True) %}checked{% endif %}>
+                        <label class="form-check-label">Console Alerts</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="ENABLE_FILE_LOGGING"
+                               {% if config.get('ENABLE_FILE_LOGGING', True) %}checked{% endif %}>
+                        <label class="form-check-label">File Logging</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="DEBUG_MODE"
+                               {% if config.get('DEBUG_MODE', False) %}checked{% endif %}>
+                        <label class="form-check-label">Debug Mode</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="PRINT_PACKETS"
+                               {% if config.get('PRINT_PACKETS', False) %}checked{% endif %}>
+                        <label class="form-check-label">Print Packets</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-save me-1"></i>Save Settings
+    </button>
+    <span id="saveStatus" class="ms-3"></span>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('settingsForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const fd = new FormData(this);
+        const payload = {};
+
+        // Numeric fields
+        for (const [key, val] of fd.entries()) {
+            const el = this.querySelector(`[name="${key}"]`);
+            if (el && el.type === 'number') {
+                payload[key] = parseInt(val, 10);
+            }
+        }
+
+        // Boolean toggles — must check all checkboxes explicitly
+        this.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            payload[cb.name] = cb.checked;
+        });
+
+        const statusEl = document.getElementById('saveStatus');
+        statusEl.innerHTML = '<span class="text-info">Saving…</span>';
+
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.status === 'ok') {
+                statusEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Saved</span>';
+            } else {
+                statusEl.innerHTML = `<span class="text-danger">${d.error || 'Error'}</span>`;
+            }
+            setTimeout(() => statusEl.innerHTML = '', 3000);
+        })
+        .catch(() => {
+            statusEl.innerHTML = '<span class="text-danger">Network error</span>';
+        });
+    });
+</script>
+{% endblock %}
