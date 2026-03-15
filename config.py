@@ -1,4 +1,3 @@
-# config.py
 """
 Global Configuration File for IDS
 Modify values here to tune detection behavior

@@ -1,4 +1,4 @@
-# sniffer.py
+
 """
 Packet Capture Module for IDS
 Captures live packets and forwards them for analysis
