@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Logs — IDS Dashboard{% endblock %}
+{% block page_title %}System Logs{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-6">
+        <input type="text" id="logSearch" class="form-control bg-dark text-light border-secondary"
+               placeholder="Filter logs…">
+    </div>
+    <div class="col-md-3">
+        <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" id="autoRefresh" checked>
+            <label class="form-check-label text-light" for="autoRefresh">Auto-refresh (5 s)</label>
+        </div>
+    </div>
+    <div class="col-md-3 text-end">
+        <button class="btn btn-outline-info" id="refreshLogs">
+            <i class="bi bi-arrow-clockwise me-1"></i>Refresh Now
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <pre class="log-viewer" id="logViewer">Loading…</pre>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let autoTimer = null;
+
+    function fetchLogs() {
+        fetch('/api/logs')
+            .then(r => r.json())
+            .then(lines => {
+                const search = document.getElementById('logSearch').value.toLowerCase();
+                let filtered = lines;
+                if (search) filtered = lines.filter(l => l.toLowerCase().includes(search));
+                const viewer = document.getElementById('logViewer');
+                viewer.textContent = filtered.length ? filtered.join('\n') : 'No log entries.';
+                viewer.scrollTop = viewer.scrollHeight;
+            });
+    }
+
+    function startAuto() {
+        stopAuto();
+        autoTimer = setInterval(fetchLogs, 5000);
+    }
+    function stopAuto() {
+        if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+    }
+
+    document.getElementById('autoRefresh').addEventListener('change', function() {
+        this.checked ? startAuto() : stopAuto();
+    });
+    document.getElementById('refreshLogs').addEventListener('click', fetchLogs);
+    document.getElementById('logSearch').addEventListener('input', fetchLogs);
+
+    fetchLogs();
+    startAuto();
+</script>
+{% endblock %}

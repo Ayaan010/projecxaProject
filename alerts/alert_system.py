@@ -1,4 +1,3 @@
-# alert_system.py
 """
 Alert & Logging System
 Handles alert display, logging, and formatting

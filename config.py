@@ -8,11 +8,10 @@ Modify values here to tune detection behavior
 # NETWORK SETTINGS
 # ================================
 
-INTERFACE = None
-# Example:
-# "eth0" for Linux
-# "Wi-Fi" for Windows
-# None = auto select
+INTERFACE = "Wi-Fi"
+# Change to "Ethernet" if you are on a wired connection.
+# Run `py -c "from scapy.all import conf; print(conf.iface)"` to confirm default.
+# None = scapy auto-selects (may pick wrong interface)
 
 
 # ================================

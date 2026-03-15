@@ -1,0 +1,5 @@
+<!-- SVG logo placeholder — replace with your own logo.png if desired -->
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#181b23"/>
+  <text x="32" y="42" font-family="Arial" font-size="28" fill="#0dcaf0" text-anchor="middle" font-weight="bold">IDS</text>
+</svg>

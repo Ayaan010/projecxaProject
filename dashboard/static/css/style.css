@@ -1,0 +1,248 @@
+/* ==================================================
+   IDS Dashboard — Dark Security Theme
+   ================================================== */
+
+:root {
+    --sidebar-width: 240px;
+    --topbar-height: 56px;
+    --bg-body: #0f1117;
+    --bg-card: #181b23;
+    --bg-sidebar: #12141c;
+    --bg-topbar: #161922;
+    --border-color: #262a36;
+    --accent-cyan: #0dcaf0;
+    --accent-green: #198754;
+    --accent-red: #dc3545;
+    --accent-yellow: #ffc107;
+    --text-primary: #e4e6eb;
+    --text-muted: #8b8fa3;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg-body);
+    color: var(--text-primary);
+    min-height: 100vh;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-body); }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+/* ==================================================
+   SIDEBAR
+   ================================================== */
+
+.sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--sidebar-width);
+    height: 100vh;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    z-index: 1050;
+    transition: transform 0.25s ease;
+}
+
+.sidebar-brand {
+    padding: 20px 18px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--accent-cyan);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-brand i { font-size: 1.5rem; }
+
+.sidebar-nav {
+    list-style: none;
+    padding: 12px 0;
+    margin: 0;
+    flex: 1;
+}
+
+.sidebar-nav li a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 20px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.92rem;
+    transition: all 0.15s ease;
+    border-left: 3px solid transparent;
+}
+
+.sidebar-nav li a:hover {
+    color: var(--text-primary);
+    background: rgba(255,255,255,0.04);
+}
+
+.sidebar-nav li a.active {
+    color: var(--accent-cyan);
+    background: rgba(13,202,240,0.08);
+    border-left-color: var(--accent-cyan);
+}
+
+.sidebar-nav li a i { font-size: 1.15rem; min-width: 20px; text-align: center; }
+
+.sidebar-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.ids-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #555;
+}
+.status-dot.online { background: var(--accent-green); box-shadow: 0 0 6px var(--accent-green); }
+.status-dot.offline { background: var(--accent-red); box-shadow: 0 0 6px var(--accent-red); }
+
+/* ==================================================
+   MAIN CONTENT
+   ================================================== */
+
+#main-content {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+}
+
+.topbar {
+    position: sticky;
+    top: 0;
+    height: var(--topbar-height);
+    background: var(--bg-topbar);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 16px;
+    z-index: 1040;
+}
+
+.topbar h5 { margin: 0; font-weight: 600; }
+
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+
+.content-area { padding: 24px; }
+
+/* ==================================================
+   CARDS
+   ================================================== */
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+}
+
+.card-header {
+    background: transparent;
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+    font-size: 0.92rem;
+    padding: 14px 18px;
+    color: var(--text-primary);
+}
+
+.card-body { padding: 18px; }
+
+/* Stat cards */
+.stat-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card .stat-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-card .stat-value { font-size: 1.75rem; font-weight: 700; margin: 4px 0 2px; }
+.stat-card .stat-sub { font-size: 0.78rem; color: var(--text-muted); }
+
+.stat-icon {
+    position: absolute;
+    right: 18px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 2.5rem;
+    opacity: 0.1;
+    color: var(--text-primary);
+}
+
+.border-start-primary { border-left: 4px solid var(--accent-cyan) !important; }
+.border-start-info    { border-left: 4px solid #6f42c1 !important; }
+.border-start-warning { border-left: 4px solid var(--accent-yellow) !important; }
+.border-start-danger  { border-left: 4px solid var(--accent-red) !important; }
+
+/* ==================================================
+   CHARTS
+   ================================================== */
+
+.chart-container {
+    position: relative;
+    height: 280px;
+}
+
+/* ==================================================
+   TABLES
+   ================================================== */
+
+.table-dark {
+    --bs-table-bg: transparent;
+    --bs-table-border-color: var(--border-color);
+}
+
+.table-dark thead th {
+    background: rgba(255,255,255,0.03);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    border-bottom-width: 1px;
+}
+
+.table-dark td { font-size: 0.88rem; vertical-align: middle; }
+
+/* ==================================================
+   LOG VIEWER
+   ================================================== */
+
+.log-viewer {
+    background: #0d0f14;
+    color: #a8e6a3;
+    padding: 16px;
+    margin: 0;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.82rem;
+    line-height: 1.65;
+    max-height: 600px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    border-radius: 0 0 10px 10px;
+}
+
+/* ==================================================
+   RESPONSIVE
+   ================================================== */
+
+@media (max-width: 767.98px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.show { transform: translateX(0); }
+    #main-content { margin-left: 0; }
+}
