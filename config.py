@@ -67,3 +67,6 @@ CLEANUP_INTERVAL = 60  # seconds
 
 DEBUG_MODE = False
 PRINT_PACKETS = False
+
+# Database configuration
+DATABASE_PATH = "ids_database.db"
