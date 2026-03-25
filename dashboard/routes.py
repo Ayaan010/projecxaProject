@@ -8,6 +8,8 @@ import json
 from flask import Blueprint, render_template, jsonify, request
 
 from dashboard.models import ids_state
+import config
+from database.db import DatabaseManager
 
 bp = Blueprint(
     "dashboard", __name__,
@@ -60,10 +62,20 @@ def api_status():
 
 @bp.route("/api/alerts")
 def api_alerts():
-    # Try in-memory alerts first; fall back to log file
+    # Try in-memory alerts first; fall back to database
     alerts = ids_state.get_recent_alerts(limit=200)
     if not alerts:
-        alerts = _parse_log_file()
+        db = DatabaseManager(config.DATABASE_PATH)
+        with db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT timestamp, alert_type as type, severity, source_ip as src_ip, description as message
+                FROM alerts
+                ORDER BY timestamp DESC
+                LIMIT 200
+            ''')
+            rows = cursor.fetchall()
+            alerts = [dict(row) for row in rows]
     return jsonify(alerts)
 
 
@@ -78,7 +90,17 @@ def api_traffic():
 
 @bp.route("/api/logs")
 def api_logs():
-    lines = _read_log_lines(300)
+    db = DatabaseManager(config.DATABASE_PATH)
+    with db.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT timestamp, event_type, message, status
+            FROM system_logs
+            ORDER BY timestamp DESC
+            LIMIT 300
+        ''')
+        rows = cursor.fetchall()
+        lines = [f"{row['timestamp']} [{row['status']}] {row['event_type']}: {row['message']}" for row in rows]
     return jsonify(lines)
 
 
