@@ -7,7 +7,7 @@ Modify values here to tune detection behavior
 # NETWORK SETTINGS
 # ================================
 
-INTERFACE = "Wi-Fi"
+INTERFACE = "Wi-Fi"  # Change back from Ethernet
 # Change to "Ethernet" if you are on a wired connection.
 # Run `py -c "from scapy.all import conf; print(conf.iface)"` to confirm default.
 # None = scapy auto-selects (may pick wrong interface)
