@@ -103,83 +103,15 @@ def start_ids_background():
         db.insert_system_log("ERROR", str(e), "ERROR")
 
 
-def start_demo_simulation():
-    """
-    Feed randomized fake packets and alerts into ids_state so the
-    dashboard can be fully demonstrated without real network capture.
-    """
-    import random
-
-    PROTOCOLS = ["TCP", "UDP", "ICMP", "OTHER"]
-    ALERT_TYPES = [
-        ("PORT_SCAN",      "HIGH",   "Port scan detected from {ip}"),
-        ("BRUTE_FORCE",    "HIGH",   "Possible brute force attack from {ip}"),
-        ("TRAFFIC_SPIKE",  "HIGH",   "High traffic rate detected from {ip}"),
-        ("SYN_SCAN",       "MEDIUM", "SYN scan detected from {ip}"),
-        ("SUSPICIOUS_PORT","MEDIUM", "Traffic to suspicious port from {ip}"),
-        ("LARGE_PACKET",   "LOW",    "Unusually large packet from {ip}"),
-        ("SYSTEM",         "INFO",   "IDS health check passed"),
-    ]
-
-    def rand_ip():
-        return f"192.168.{random.randint(0, 10)}.{random.randint(1, 254)}"
-
-    ids_state.set_running(True)
-
-    # Initialize database
-    db = DatabaseManager(config.DATABASE_PATH)
-
-    tick = 0
-    while True:
-        # Simulate a burst of packets (10–60 per second)
-        for _ in range(random.randint(10, 60)):
-            p = random.choices(PROTOCOLS, weights=[60, 25, 10, 5])[0]
-            ids_state.record_packet(p)
-
-        # Snapshot traffic every ~3 s
-        if tick % 3 == 0:
-            ids_state.take_traffic_snapshot()
-
-        # Randomly fire an alert (≈30 % chance per second)
-        if random.random() < 0.30:
-            atype, severity, tmpl = random.choice(ALERT_TYPES)
-            ip = rand_ip()
-            alert = {
-                "type": atype,
-                "src_ip": ip,
-                "message": tmpl.format(ip=ip),
-                "severity": severity,
-            }
-            ids_state.record_alert(alert)
-            
-            # Save to database
-            alert_data = {
-                'alert_type': alert['type'],
-                'severity': alert['severity'],
-                'source_ip': alert['src_ip'],
-                'description': alert['message'],
-                'protocol': 'TCP',  # Fake protocol for demo
-            }
-            db.insert_alert(alert_data)
-
-        tick += 1
-        time.sleep(1)
-
-
 def main():
     with_ids = "--with-ids" in sys.argv
-    demo     = "--demo"     in sys.argv
 
     if with_ids:
         print("[*] Starting IDS engine in background thread…")
         t = threading.Thread(target=start_ids_background, daemon=True)
         t.start()
-    elif demo:
-        print("[*] Demo mode — simulating fake traffic and alerts…")
-        t = threading.Thread(target=start_demo_simulation, daemon=True)
-        t.start()
     else:
-        print("[*] Dashboard-only mode  |  --demo for simulation  |  --with-ids for live capture")
+        print("[*] Dashboard-only mode | Use --with-ids for live capture")
 
     app = create_app()
     print("[*] Dashboard is running at http://127.0.0.1:5000")
