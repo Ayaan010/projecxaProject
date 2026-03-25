@@ -17,6 +17,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from dashboard.app import create_app
 from dashboard.models import ids_state
+import config
+from database.db import DatabaseManager
 
 
 def start_ids_background():
@@ -32,6 +34,7 @@ def start_ids_background():
     rule_engine = RuleEngine()
     anomaly_engine = AnomalyDetector()
     alert_system = AlertSystem(config.LOG_FILE)
+    db = DatabaseManager(config.DATABASE_PATH)
 
     severity_map = {
         "PORT_SCAN": "HIGH",
@@ -59,6 +62,20 @@ def start_ids_background():
             alert["severity"] = severity_map.get(alert.get("type"), "INFO")
             ids_state.record_alert(alert)
             alert_system.raise_alert(alert)
+            
+            # Save to database
+            alert_data = {
+                'alert_type': alert.get('type', 'Unknown'),
+                'severity': alert.get('severity', 'Medium'),
+                'source_ip': parsed.get('src_ip'),
+                'destination_ip': parsed.get('dst_ip'),
+                'source_port': parsed.get('src_port'),
+                'destination_port': parsed.get('dst_port'),
+                'protocol': parsed.get('protocol'),
+                'description': alert.get('message'),
+                'raw_data': str(parsed)
+            }
+            db.insert_alert(alert_data)
 
     sniffer = PacketSniffer(
         interface=config.INTERFACE,
@@ -66,6 +83,9 @@ def start_ids_background():
     )
 
     ids_state.set_running(True)
+
+    # Log start
+    db.insert_system_log("IDS_START", "IDS Started Successfully", "INFO")
 
     # Periodic traffic snapshots
     def snapshot_loop():
@@ -80,6 +100,7 @@ def start_ids_background():
     except Exception as e:
         print(f"[IDS] Error: {e}")
         ids_state.set_running(False)
+        db.insert_system_log("ERROR", str(e), "ERROR")
 
 
 def start_demo_simulation():
@@ -105,6 +126,9 @@ def start_demo_simulation():
 
     ids_state.set_running(True)
 
+    # Initialize database
+    db = DatabaseManager(config.DATABASE_PATH)
+
     tick = 0
     while True:
         # Simulate a burst of packets (10–60 per second)
@@ -120,12 +144,23 @@ def start_demo_simulation():
         if random.random() < 0.30:
             atype, severity, tmpl = random.choice(ALERT_TYPES)
             ip = rand_ip()
-            ids_state.record_alert({
+            alert = {
                 "type": atype,
                 "src_ip": ip,
                 "message": tmpl.format(ip=ip),
                 "severity": severity,
-            })
+            }
+            ids_state.record_alert(alert)
+            
+            # Save to database
+            alert_data = {
+                'alert_type': alert['type'],
+                'severity': alert['severity'],
+                'source_ip': alert['src_ip'],
+                'description': alert['message'],
+                'protocol': 'TCP',  # Fake protocol for demo
+            }
+            db.insert_alert(alert_data)
 
         tick += 1
         time.sleep(1)
