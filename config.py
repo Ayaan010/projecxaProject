@@ -14,7 +14,7 @@ INTERFACE = "Wi-Fi"  # Change back from Ethernet
 
 
 # ================================
-# RULE ENGINE SETTING
+# RULE ENGINE SETTINGS
 # ================================
 
 PORT_SCAN_THRESHOLD = 15
