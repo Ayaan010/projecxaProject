@@ -130,7 +130,7 @@
                         <th>Source IP</th>
                         <th>Severity</th>
                         <th>Message</th>
-                        <th></th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="alertsTableBody">
@@ -162,19 +162,26 @@
         }
         body.innerHTML = data.map(a => {
             const isBlocked = blockedIPs.has(a.src_ip);
-            const blockBtn = a.src_ip && a.src_ip !== 'N/A'
+            const hasIp = a.src_ip && a.src_ip !== 'N/A';
+            const blockBtn = hasIp
                 ? `<button class="btn btn-outline-danger btn-sm py-0 px-1 block-btn" data-ip="${a.src_ip}"
                        title="${isBlocked ? 'Already blocked' : 'Block this IP'}" ${isBlocked ? 'disabled' : ''}>
                        <i class="bi bi-slash-circle"></i>
                    </button>`
                 : '';
+            const detailLink = hasIp
+                ? `<a href="/threat-detail?ip=${encodeURIComponent(a.src_ip)}"
+                      class="btn btn-outline-info btn-sm py-0 px-1" title="View threat detail">
+                      <i class="bi bi-search"></i>
+                   </a>`
+                : '';
             return `<tr>
                 <td>${a.timestamp}</td>
                 <td><code>${a.type}</code></td>
-                <td><code>${a.src_ip}</code></td>
+                <td><a href="/threat-detail?ip=${encodeURIComponent(a.src_ip)}" class="text-info font-monospace">${a.src_ip}</a></td>
                 <td>${severityBadge(a.severity)}</td>
                 <td>${a.message}</td>
-                <td>${blockBtn}</td>
+                <td class="text-nowrap">${detailLink} ${blockBtn}</td>
             </tr>`;
         }).join('');
 

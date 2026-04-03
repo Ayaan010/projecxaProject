@@ -6,19 +6,20 @@ Detects abnormal traffic patterns
 
 from collections import defaultdict
 from datetime import datetime, timedelta
+import config
 
 
 class AnomalyDetector:
-    def _init_(self):
+    def __init__(self):
 
         # traffic tracking
         self.packet_rate = defaultdict(list)
         self.packet_size_tracker = defaultdict(list)
 
-        # thresholds
-        self.PACKET_RATE_THRESHOLD = 100
-        self.TIME_WINDOW = 5
-        self.LARGE_PACKET_SIZE = 1500
+        # thresholds (read from config)
+        self.PACKET_RATE_THRESHOLD = config.PACKET_RATE_THRESHOLD
+        self.TIME_WINDOW = config.TRAFFIC_TIME_WINDOW
+        self.LARGE_PACKET_SIZE = config.LARGE_PACKET_SIZE
 
     # --------------------------------------------------
     # MAIN CHECK FUNCTION

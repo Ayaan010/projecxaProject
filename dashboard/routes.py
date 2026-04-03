@@ -5,7 +5,7 @@ Flask Routes — page views & API endpoints
 import os
 import re
 import json
-from flask import Blueprint, render_template, jsonify, request
+from flask import Blueprint, render_template, jsonify, request, Response
 
 from dashboard.models import ids_state
 import config
@@ -20,6 +20,23 @@ bp = Blueprint(
 
 LOG_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs", "alerts.log")
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.py")
+
+# Shared DB instance — created once, reused across all requests
+_db = DatabaseManager(config.DATABASE_PATH)
+
+# ──────────────────────────────────────
+# AUTHENTICATION
+# ──────────────────────────────────────
+
+@bp.before_request
+def check_auth():
+    auth = request.authorization
+    if not auth or auth.username != config.DASHBOARD_USER or auth.password != config.DASHBOARD_PASSWORD:
+        return Response(
+            "Authentication required",
+            401,
+            {"WWW-Authenticate": 'Basic realm="IDS Dashboard"'},
+        )
 
 # ──────────────────────────────────────
 # PAGE ROUTES
@@ -51,6 +68,17 @@ def settings_page():
     return render_template("settings.html", config=config_vals)
 
 
+@bp.route("/threat-guide")
+def threat_guide_page():
+    return render_template("threat_guide.html")
+
+
+@bp.route("/threat-detail")
+def threat_detail_page():
+    ip = request.args.get("ip", "").strip()
+    return render_template("threat_detail.html", ip=ip)
+
+
 # ──────────────────────────────────────
 # API ROUTES
 # ──────────────────────────────────────
@@ -65,8 +93,7 @@ def api_alerts():
     # Try in-memory alerts first; fall back to database
     alerts = ids_state.get_recent_alerts(limit=200)
     if not alerts:
-        db = DatabaseManager(config.DATABASE_PATH)
-        with db.get_connection() as conn:
+        with _db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT timestamp, alert_type as type, severity, source_ip as src_ip, description as message
@@ -77,6 +104,130 @@ def api_alerts():
             rows = cursor.fetchall()
             alerts = [dict(row) for row in rows]
     return jsonify(alerts)
+
+
+@bp.route("/api/alert_stats")
+def api_alert_stats():
+    """Counts per alert type and per severity — used by breakdown chart."""
+    type_counts = ids_state.get_alert_type_counts()
+    # Also pull severity buckets from type_counts
+    severity_map = {
+        "PORT_SCAN": "HIGH", "BRUTE_FORCE": "HIGH", "TRAFFIC_SPIKE": "HIGH",
+        "SYN_SCAN": "MEDIUM", "SUSPICIOUS_PORT": "MEDIUM",
+        "LARGE_PACKET": "LOW", "SYSTEM": "INFO",
+    }
+    severity_counts = {"HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0}
+    for t, cnt in type_counts.items():
+        sev = severity_map.get(t, "INFO")
+        severity_counts[sev] += cnt
+    return jsonify({"by_type": type_counts, "by_severity": severity_counts})
+
+
+@bp.route("/api/top_threats")
+def api_top_threats():
+    """Top IPs by total alert count."""
+    return jsonify(ids_state.get_top_threat_ips(n=10))
+
+
+@bp.route("/api/ip_detail/<path:ip>")
+def api_ip_detail(ip):
+    """Full detail for a specific source IP."""
+    ip = ip.strip()
+    if not re.match(r"^\d{1,3}(\.\d{1,3}){3}$", ip):
+        return jsonify({"error": "Invalid IP"}), 400
+
+    detail = ids_state.get_ip_detail(ip)
+
+    # Enrich with DB records if in-memory history is empty
+    if not detail["recent_alerts"]:
+        with _db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT timestamp, alert_type as type, severity,
+                       source_ip as src_ip, description as message
+                FROM alerts
+                WHERE source_ip = ?
+                ORDER BY timestamp DESC
+                LIMIT 50
+            ''', (ip,))
+            rows = cursor.fetchall()
+            db_alerts = [dict(r) for r in rows]
+
+        # Rebuild summary from DB rows
+        type_counts = {}
+        for a in db_alerts:
+            t = a.get("type", "UNKNOWN")
+            type_counts[t] = type_counts.get(t, 0) + 1
+        high = sum(1 for a in db_alerts if a.get("severity") == "HIGH")
+        timestamps = [a["timestamp"] for a in db_alerts if a.get("timestamp")]
+
+        detail["recent_alerts"] = db_alerts
+        detail["type_counts"]   = type_counts
+        detail["total_alerts"]  = len(db_alerts)
+        detail["high_alerts"]   = high
+        detail["first_seen"]    = timestamps[-1] if timestamps else None
+        detail["last_seen"]     = timestamps[0]  if timestamps else None
+
+    return jsonify(detail)
+
+
+@bp.route("/api/pending_blocks", methods=["GET"])
+def api_pending_blocks_get():
+    """Return IPs waiting for block confirmation."""
+    return jsonify(ids_state.get_pending_blocks())
+
+
+@bp.route("/api/pending_blocks", methods=["POST"])
+def api_pending_blocks_post():
+    """Confirm or dismiss a pending block request.
+    Body: {"ip": "x.x.x.x", "action": "confirm"|"dismiss"}
+    """
+    data = request.get_json(force=True) or {}
+    ip = data.get("ip", "").strip()
+    action = data.get("action", "").strip()
+
+    import re as _re
+    if not _re.match(r"^\d{1,3}(\.\d{1,3}){3}$", ip):
+        return jsonify({"error": "Invalid IP address format"}), 400
+    if action not in ("confirm", "dismiss"):
+        return jsonify({"error": "action must be 'confirm' or 'dismiss'"}), 400
+
+    if action == "confirm":
+        ids_state.confirm_block(ip)
+        _db.insert_system_log("BLOCK_CONFIRMED", f"IP {ip} blocked by user", "WARNING")
+    else:
+        ids_state.dismiss_block(ip)
+        _db.insert_system_log("BLOCK_DISMISSED", f"Block request for {ip} dismissed by user", "INFO")
+
+    return jsonify({"status": "ok", "ip": ip, "action": action})
+
+
+@bp.route("/api/blocklist", methods=["GET"])
+def api_blocklist_get():
+    """Return current blocked IPs."""
+    return jsonify({"blocked_ips": ids_state.get_blocked_ips()})
+
+
+@bp.route("/api/blocklist", methods=["POST"])
+def api_blocklist_post():
+    """Block or unblock an IP. Body: {"ip": "x.x.x.x", "action": "block"|"unblock"}"""
+    data = request.get_json(force=True) or {}
+    ip = data.get("ip", "").strip()
+    action = data.get("action", "").strip()
+
+    # Validate IP format (basic check)
+    import re as _re
+    if not _re.match(r"^\d{1,3}(\.\d{1,3}){3}$", ip):
+        return jsonify({"error": "Invalid IP address format"}), 400
+    if action not in ("block", "unblock"):
+        return jsonify({"error": "action must be 'block' or 'unblock'"}), 400
+
+    if action == "block":
+        ids_state.block_ip(ip)
+    else:
+        ids_state.unblock_ip(ip)
+
+    return jsonify({"status": "ok", "ip": ip, "action": action})
 
 
 @bp.route("/api/traffic")
@@ -90,8 +241,7 @@ def api_traffic():
 
 @bp.route("/api/logs")
 def api_logs():
-    db = DatabaseManager(config.DATABASE_PATH)
-    with db.get_connection() as conn:
+    with _db.get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute('''
             SELECT timestamp, event_type, message, status

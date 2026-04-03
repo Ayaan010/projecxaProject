@@ -34,6 +34,46 @@ class AlertSystem:
             "SYSTEM": "INFO"
         }
 
+        # Plain-English descriptions shown in the dashboard UI
+        self.alert_descriptions = {
+            "PORT_SCAN": (
+                "A single IP is probing many different ports rapidly. "
+                "Attackers do this to find open services they can exploit. "
+                "Triggered when one IP hits more than 15 unique ports."
+            ),
+            "BRUTE_FORCE": (
+                "An IP is sending a very high number of connection attempts "
+                "to authentication ports (SSH, RDP, FTP, etc.) in a short time. "
+                "This usually means an automated password-guessing attack."
+            ),
+            "SYN_SCAN": (
+                "An unusually high number of TCP SYN-only packets are being received "
+                "from one IP in a short window (more than 20 SYN packets in 10 seconds). "
+                "Normal connections send one SYN then complete the handshake — "
+                "a scanner repeatedly sends SYN without ever completing the connection "
+                "to silently map which ports are open."
+            ),
+            "TRAFFIC_SPIKE": (
+                "One IP is sending an unusually large number of packets in a very "
+                "short window (more than 100 packets in 5 seconds). This could indicate "
+                "a flood/DoS attack or a misconfigured device. "
+                "After 3 HIGH alerts the IP is automatically blocked."
+            ),
+            "SUSPICIOUS_PORT": (
+                "Traffic was detected on a port commonly used by malware or "
+                "remote-access tools (e.g., 4444 — Metasploit default, 1337, 6666, 9999). "
+                "Legitimate software rarely uses these ports."
+            ),
+            "LARGE_PACKET": (
+                "A packet larger than 1600 bytes was received. "
+                "Standard Ethernet frames max out at ~1514 bytes (including all headers). "
+                "Oversized packets may indicate jumbo-frame misconfiguration, "
+                "data exfiltration, or a fragmentation-based evasion attempt. "
+                "Individually low-risk, but worth investigating if recurring."
+            ),
+            "SYSTEM": "Internal IDS status message — not a network threat.",
+        }
+
     # --------------------------------------------------
     # MAIN ALERT HANDLER
     # --------------------------------------------------
