@@ -63,11 +63,33 @@
             });
     }
 
+    // --- Fetch top threat IPs ---
+    function fetchTopThreats() {
+        fetch('/api/top_threats')
+            .then(r => r.json())
+            .then(data => {
+                const body = document.getElementById('topThreatsBody');
+                if (!data.length) {
+                    body.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No data yet</td></tr>';
+                    return;
+                }
+                body.innerHTML = data.map(t => {
+                    const highCls = t.high_alerts > 0 ? 'text-danger fw-bold' : '';
+                    return '<tr>' +
+                        '<td><code>' + t.ip + '</code></td>' +
+                        '<td class="text-center">' + t.total_alerts + '</td>' +
+                        '<td class="text-center ' + highCls + '">' + t.high_alerts + '</td>' +
+                    '</tr>';
+                }).join('');
+            });
+    }
+
     // Poll
     function refreshAll() {
         fetchStatus();
         fetchTraffic();
         fetchAlerts();
+        fetchTopThreats();
     }
 
     refreshAll();

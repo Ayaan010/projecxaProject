@@ -49,6 +49,11 @@
                 <i class="bi bi-gear"></i><span>Settings</span>
             </a>
         </li>
+        <li>
+            <a href="{{ url_for('dashboard.threat_guide_page') }}" class="{% if request.path == '/threat-guide' %}active{% endif %}">
+                <i class="bi bi-book"></i><span>Threat Guide</span>
+            </a>
+        </li>
     </ul>
 
     <div class="sidebar-footer">
@@ -74,6 +79,9 @@
 
     <!-- Page content -->
     <main class="content-area">
+        <!-- Block-request notification banner -->
+        <div id="blockRequestBanner" style="display:none;" class="mx-3 mt-3"></div>
+
         {% block content %}{% endblock %}
     </main>
 </div>
@@ -116,6 +124,59 @@
     }
     setInterval(updateSidebarStatus, 3000);
     updateSidebarStatus();
+
+    // ── Pending block-request notifications ──
+    function fetchPendingBlocks() {
+        fetch('/api/pending_blocks')
+            .then(r => r.json())
+            .then(items => {
+                const banner = document.getElementById('blockRequestBanner');
+                if (!items.length) {
+                    banner.style.display = 'none';
+                    banner.innerHTML = '';
+                    return;
+                }
+                banner.style.display = 'block';
+                banner.innerHTML = items.map(p => `
+                    <div class="alert alert-warning alert-dismissible d-flex align-items-center gap-3 mb-2 py-2"
+                         id="pending-${p.ip.replace(/\./g,'-')}" role="alert">
+                        <i class="bi bi-shield-exclamation fs-5"></i>
+                        <div class="flex-grow-1">
+                            <strong>Block request:</strong>
+                            IP <code>${p.ip}</code> triggered <strong>${p.high_alerts} HIGH alerts</strong>
+                            — ${p.reason}
+                            <small class="text-muted ms-2">${p.timestamp}</small>
+                        </div>
+                        <button class="btn btn-danger btn-sm confirm-block-btn" data-ip="${p.ip}">
+                            <i class="bi bi-slash-circle me-1"></i>Block IP
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm dismiss-block-btn" data-ip="${p.ip}">
+                            Dismiss
+                        </button>
+                        <button type="button" class="btn-close dismiss-block-btn" data-ip="${p.ip}"
+                                aria-label="Dismiss"></button>
+                    </div>
+                `).join('');
+
+                banner.querySelectorAll('.confirm-block-btn').forEach(btn => {
+                    btn.addEventListener('click', () => respondBlock(btn.dataset.ip, 'confirm'));
+                });
+                banner.querySelectorAll('.dismiss-block-btn').forEach(btn => {
+                    btn.addEventListener('click', () => respondBlock(btn.dataset.ip, 'dismiss'));
+                });
+            });
+    }
+
+    function respondBlock(ip, action) {
+        fetch('/api/pending_blocks', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ip, action})
+        }).then(() => fetchPendingBlocks());
+    }
+
+    setInterval(fetchPendingBlocks, 5000);
+    fetchPendingBlocks();
 </script>
 
 {% block scripts %}{% endblock %}

@@ -4,6 +4,88 @@
 {% block page_title %}Alerts{% endblock %}
 
 {% block content %}
+
+<!-- ── Alert Breakdown + Blocked IPs row ── -->
+<div class="row g-3 mb-4">
+
+    <!-- Alert Type Breakdown Chart -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-bar-chart me-2"></i>Alert Type Breakdown</div>
+            <div class="card-body chart-container">
+                <canvas id="alertBreakdownChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blocked IPs Manager -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-slash-circle me-2"></i>Blocked IPs
+                    <span class="badge bg-danger ms-1" id="blockedCount">0</span>
+                </span>
+                <button class="btn btn-sm btn-outline-secondary" id="refreshBlocklist">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height:180px;overflow-y:auto;">
+                    <table class="table table-dark table-sm mb-0">
+                        <thead><tr><th>IP Address</th><th>Reason</th><th></th></tr></thead>
+                        <tbody id="blockedIpsBody">
+                            <tr><td colspan="3" class="text-center text-muted py-2">No blocked IPs</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Manual block form -->
+                <div class="p-2 border-top border-secondary d-flex gap-2">
+                    <input type="text" id="manualBlockIp" class="form-control form-control-sm bg-dark text-light border-secondary"
+                           placeholder="Enter IP to block…" style="max-width:200px;">
+                    <button class="btn btn-sm btn-danger" id="manualBlockBtn">
+                        <i class="bi bi-slash-circle me-1"></i>Block
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Alert Type Explanations Legend ── -->
+<div class="card mb-4">
+    <div class="card-header" data-bs-toggle="collapse" data-bs-target="#legendCollapse"
+         style="cursor:pointer;">
+        <i class="bi bi-info-circle me-2"></i>What do these alerts mean?
+        <i class="bi bi-chevron-down float-end"></i>
+    </div>
+    <div class="collapse" id="legendCollapse">
+        <div class="card-body">
+            <div class="row g-3">
+                {% set explanations = [
+                    ("PORT_SCAN",       "danger",   "bi-radar",            "Port Scan",       "One IP is probing many different ports rapidly to find open services. Triggered when a single IP hits more than 15 unique ports."),
+                    ("BRUTE_FORCE",     "danger",   "bi-key",              "Brute Force",     "Many rapid connection attempts to login ports (SSH port 22, RDP port 3389, FTP port 21, etc). Usually an automated password-guessing attack."),
+                    ("TRAFFIC_SPIKE",   "danger",   "bi-graph-up-arrow",   "Traffic Spike",   "One IP is flooding the network — more than 100 packets in 5 seconds. Could be a DoS attack or broken device. After 3 HIGH alerts, the IP is automatically blocked."),
+                    ("SYN_SCAN",        "warning",  "bi-cursor",           "SYN Scan",        "TCP packets sent with only the SYN flag (no full handshake). A stealthy technique used to map open ports without triggering connection logs."),
+                    ("SUSPICIOUS_PORT", "warning",  "bi-exclamation-diamond","Suspicious Port","Traffic on ports known to be used by malware or hacking tools: 4444 (Metasploit), 1337, 6666, 9999."),
+                    ("LARGE_PACKET",    "info",     "bi-box-arrow-up-right","Large Packet",   "A packet bigger than 1500 bytes (the normal Ethernet limit) was detected. Could indicate data exfiltration or a fragmentation evasion attempt.")
+                ] %}
+                {% for type, color, icon, label, desc in explanations %}
+                <div class="col-md-4">
+                    <div class="d-flex gap-2">
+                        <span class="text-{{ color }} fs-5 mt-1"><i class="bi {{ icon }}"></i></span>
+                        <div>
+                            <div class="fw-semibold text-{{ color }}">{{ label }}</div>
+                            <small class="text-muted">{{ desc }}</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Filters + Table ── -->
 <div class="row g-3 mb-3">
     <div class="col-md-4">
         <input type="text" id="alertSearch" class="form-control bg-dark text-light border-secondary"
@@ -48,10 +130,11 @@
                         <th>Source IP</th>
                         <th>Severity</th>
                         <th>Message</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody id="alertsTableBody">
-                    <tr><td colspan="5" class="text-center text-muted">Loading…</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted">Loading…</td></tr>
                 </tbody>
             </table>
         </div>
@@ -62,29 +145,46 @@
 {% block scripts %}
 <script>
     let allAlerts = [];
+    let blockedIPs = new Set();
 
+    // ── Severity badge helper ──
     function severityBadge(sev) {
         const cls = {HIGH:'danger', MEDIUM:'warning', LOW:'info', INFO:'secondary'}[sev] || 'secondary';
         return `<span class="badge bg-${cls}">${sev}</span>`;
     }
 
+    // ── Render alerts table ──
     function renderAlerts(data) {
         const body = document.getElementById('alertsTableBody');
         if (!data.length) {
-            body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No alerts found</td></tr>';
+            body.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No alerts found</td></tr>';
             return;
         }
-        body.innerHTML = data.map(a => `
-            <tr>
+        body.innerHTML = data.map(a => {
+            const isBlocked = blockedIPs.has(a.src_ip);
+            const blockBtn = a.src_ip && a.src_ip !== 'N/A'
+                ? `<button class="btn btn-outline-danger btn-sm py-0 px-1 block-btn" data-ip="${a.src_ip}"
+                       title="${isBlocked ? 'Already blocked' : 'Block this IP'}" ${isBlocked ? 'disabled' : ''}>
+                       <i class="bi bi-slash-circle"></i>
+                   </button>`
+                : '';
+            return `<tr>
                 <td>${a.timestamp}</td>
                 <td><code>${a.type}</code></td>
                 <td><code>${a.src_ip}</code></td>
                 <td>${severityBadge(a.severity)}</td>
                 <td>${a.message}</td>
-            </tr>
-        `).join('');
+                <td>${blockBtn}</td>
+            </tr>`;
+        }).join('');
+
+        // Wire up per-row block buttons
+        document.querySelectorAll('.block-btn').forEach(btn => {
+            btn.addEventListener('click', () => blockIP(btn.dataset.ip));
+        });
     }
 
+    // ── Filter logic ──
     function applyFilters() {
         const search = document.getElementById('alertSearch').value.toLowerCase();
         const sev = document.getElementById('severityFilter').value;
@@ -100,18 +200,100 @@
         renderAlerts(filtered);
     }
 
+    // ── Fetch alerts ──
     function fetchAlerts() {
         fetch('/api/alerts')
             .then(r => r.json())
             .then(data => { allAlerts = data; applyFilters(); });
     }
 
+    // ── Alert breakdown chart ──
+    const TYPE_COLORS = {
+        PORT_SCAN:'#dc3545', BRUTE_FORCE:'#c82333', TRAFFIC_SPIKE:'#e83e8c',
+        SYN_SCAN:'#ffc107', SUSPICIOUS_PORT:'#fd7e14',
+        LARGE_PACKET:'#0dcaf0', SYSTEM:'#6c757d'
+    };
+
+    const breakCtx = document.getElementById('alertBreakdownChart').getContext('2d');
+    const breakdownChart = new Chart(breakCtx, {
+        type: 'bar',
+        data: { labels: [], datasets: [{ label: 'Count', data: [], backgroundColor: [] }] },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            scales: { x: { beginAtZero: true, grid:{color:'#333'}, ticks:{color:'#ccc'} },
+                      y: { grid:{display:false}, ticks:{color:'#ccc'} } },
+            plugins: { legend:{display:false} }
+        }
+    });
+
+    function fetchAlertStats() {
+        fetch('/api/alert_stats').then(r => r.json()).then(d => {
+            const types = Object.keys(d.by_type).sort();
+            breakdownChart.data.labels = types;
+            breakdownChart.data.datasets[0].data = types.map(t => d.by_type[t]);
+            breakdownChart.data.datasets[0].backgroundColor = types.map(t => TYPE_COLORS[t] || '#6c757d');
+            breakdownChart.update();
+        });
+    }
+
+    // ── Blocked IPs ──
+    function fetchBlocklist() {
+        fetch('/api/blocklist').then(r => r.json()).then(d => {
+            const ips = d.blocked_ips || [];
+            blockedIPs = new Set(ips);
+            document.getElementById('blockedCount').textContent = ips.length;
+            const body = document.getElementById('blockedIpsBody');
+            if (!ips.length) {
+                body.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-2">No blocked IPs</td></tr>';
+                return;
+            }
+            body.innerHTML = ips.map(ip => `
+                <tr>
+                    <td><code>${ip}</code></td>
+                    <td><small class="text-muted">Auto/Manual block</small></td>
+                    <td><button class="btn btn-outline-success btn-sm py-0 px-1 unblock-btn" data-ip="${ip}">
+                        <i class="bi bi-check-circle"></i> Unblock
+                    </button></td>
+                </tr>`).join('');
+            document.querySelectorAll('.unblock-btn').forEach(btn => {
+                btn.addEventListener('click', () => unblockIP(btn.dataset.ip));
+            });
+        });
+    }
+
+    function blockIP(ip) {
+        fetch('/api/blocklist', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ip, action:'block'})
+        }).then(() => { fetchBlocklist(); applyFilters(); });
+    }
+
+    function unblockIP(ip) {
+        fetch('/api/blocklist', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ip, action:'unblock'})
+        }).then(() => { fetchBlocklist(); applyFilters(); });
+    }
+
+    // Manual block input
+    document.getElementById('manualBlockBtn').addEventListener('click', () => {
+        const ip = document.getElementById('manualBlockIp').value.trim();
+        if (ip) { blockIP(ip); document.getElementById('manualBlockIp').value = ''; }
+    });
+
+    // Event listeners
     document.getElementById('alertSearch').addEventListener('input', applyFilters);
     document.getElementById('severityFilter').addEventListener('change', applyFilters);
     document.getElementById('typeFilter').addEventListener('change', applyFilters);
     document.getElementById('refreshAlerts').addEventListener('click', fetchAlerts);
+    document.getElementById('refreshBlocklist').addEventListener('click', fetchBlocklist);
 
+    // Initial load + auto-refresh
     fetchAlerts();
+    fetchAlertStats();
+    fetchBlocklist();
     setInterval(fetchAlerts, 5000);
+    setInterval(fetchAlertStats, 10000);
+    setInterval(fetchBlocklist, 10000);
 </script>
 {% endblock %}
