@@ -1,0 +1,527 @@
+{% extends "base.html" %}
+
+{% block title %}Threat Detail — {{ ip }}{% endblock %}
+{% block page_title %}Threat Detail{% endblock %}
+
+{% block content %}
+
+<!-- Back + IP header -->
+<div class="d-flex align-items-center gap-3 mb-4">
+    <a href="/alerts" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Alerts
+    </a>
+    <div>
+        <h4 class="mb-0">
+            <i class="bi bi-bullseye me-2 text-danger"></i>
+            <span id="ipTitle">{{ ip or 'Loading…' }}</span>
+        </h4>
+        <small class="text-muted">Live threat intelligence for this source IP</small>
+    </div>
+</div>
+
+<!-- Loading / not found state -->
+<div id="notFoundMsg" style="display:none;" class="alert alert-warning">
+    <i class="bi bi-question-circle me-2"></i>
+    No alerts recorded for this IP in the current session or database. It may have been cleared.
+</div>
+
+<!-- ── Status bar ── -->
+<div class="row g-3 mb-4" id="statCards" style="display:none;">
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card border-start-danger">
+            <div class="card-body">
+                <div class="stat-label">Total Alerts</div>
+                <div class="stat-value" id="statTotal">—</div>
+            </div>
+            <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card border-start-warning">
+            <div class="card-body">
+                <div class="stat-label">HIGH Severity</div>
+                <div class="stat-value text-danger" id="statHigh">—</div>
+            </div>
+            <div class="stat-icon"><i class="bi bi-radioactive"></i></div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card border-start-info">
+            <div class="card-body">
+                <div class="stat-label">First Seen</div>
+                <div class="stat-value fs-6" id="statFirst">—</div>
+            </div>
+            <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card border-start-primary">
+            <div class="card-body">
+                <div class="stat-label">IP Status</div>
+                <div class="stat-value fs-6" id="statStatus">—</div>
+            </div>
+            <div class="stat-icon"><i class="bi bi-shield"></i></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Main content ── -->
+<div id="mainContent" style="display:none;">
+<div class="row g-3 mb-4">
+
+    <!-- Alert-type breakdown chart -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-bar-chart me-2"></i>Alert Types from This IP</div>
+            <div class="card-body chart-container">
+                <canvas id="typeBreakdownChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Threat intel + block action panel -->
+    <div class="col-lg-8">
+        <div class="card h-100" id="threatExplainCard">
+            <div class="card-header" id="explainHeader">
+                <i class="bi bi-info-circle me-2"></i>What is happening with this IP?
+            </div>
+            <div class="card-body" id="explainBody">
+                <p class="text-muted">Loading analysis…</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── Block / Unblock action card ── -->
+<div class="card mb-4" id="actionCard">
+    <div class="card-header"><i class="bi bi-shield-lock me-2"></i>Action — Block / Unblock This IP</div>
+    <div class="card-body">
+        <div class="row g-4 align-items-start">
+
+            <div class="col-md-6">
+                <h6 class="text-success"><i class="bi bi-check2-circle me-1"></i>If you BLOCK this IP</h6>
+                <ul class="small text-muted" id="blockEffectsList">
+                    <!-- Filled dynamically based on dominant threat type -->
+                </ul>
+            </div>
+
+            <div class="col-md-6">
+                <h6 class="text-danger"><i class="bi bi-x-circle me-1"></i>If you do NOT block it</h6>
+                <ul class="small text-muted" id="noBlockEffectsList">
+                    <!-- Filled dynamically -->
+                </ul>
+            </div>
+
+            <div class="col-12 d-flex gap-2 align-items-center flex-wrap">
+                <button class="btn btn-danger" id="blockBtn" style="display:none;">
+                    <i class="bi bi-slash-circle me-1"></i>Block This IP Now
+                </button>
+                <button class="btn btn-success" id="unblockBtn" style="display:none;">
+                    <i class="bi bi-check-circle me-1"></i>Unblock This IP
+                </button>
+                <span class="text-muted small" id="actionNote"></span>
+            </div>
+
+            <div class="col-12">
+                <div class="alert alert-secondary small mb-0">
+                    <i class="bi bi-lightbulb me-1"></i>
+                    <strong>Note:</strong> Blocks in this IDS are <em>session-only</em> (in-memory). They do not add OS firewall rules and clear on restart.
+                    For a permanent block on Windows run:
+                    <code id="winCmd"></code>
+                    <br>On Linux: <code id="linCmd"></code>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Full alert history for this IP ── -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history me-2"></i>Full Alert History for This IP</span>
+        <button class="btn btn-sm btn-outline-secondary" id="refreshBtn">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Alert Type</th>
+                        <th>Severity</th>
+                        <th>Message</th>
+                        <th>Explanation</th>
+                    </tr>
+                </thead>
+                <tbody id="historyBody">
+                    <tr><td colspan="5" class="text-center text-muted py-3">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div><!-- /mainContent -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Per-type knowledge base ──
+const THREAT_KB = {
+    PORT_SCAN: {
+        severity: 'HIGH',
+        icon: 'bi-radar',
+        color: 'danger',
+        title: 'Port Scan',
+        summary: 'This IP is rapidly probing many different ports on your network. This is typically the first step of an attack — the attacker is mapping which services are running before attempting to exploit one.',
+        causes: [
+            'Attacker running Nmap, Masscan, or similar reconnaissance tools',
+            'Automated vulnerability scanner (could be your own IT team — verify)',
+            'Malware on another device on your network scanning laterally',
+            'Misconfigured device retrying connection to many ports',
+        ],
+        blockEffects: [
+            'Scan stops immediately — no more port responses from your machine',
+            'Attacker cannot discover your open services',
+            'Safe to block if the IP is external or unknown',
+            'If it is your IT team\'s scanner, unblock it from the Alerts page',
+        ],
+        noBlockEffects: [
+            'Attacker learns which ports are open on your machine',
+            'They may follow up with a targeted exploit on an open port',
+            'The scan itself does not cause damage, but it enables future attacks',
+        ],
+    },
+    BRUTE_FORCE: {
+        severity: 'HIGH',
+        icon: 'bi-key',
+        color: 'danger',
+        title: 'Brute Force Attack',
+        summary: 'This IP is making rapid, repeated login attempts to an authentication service (SSH, RDP, FTP, etc.). An automated tool is likely trying thousands of username/password combinations.',
+        causes: [
+            'Automated credential stuffing using leaked password lists',
+            'Dictionary attack trying common passwords (admin, 123456, password…)',
+            'Targeted SSH or RDP brute force — very common against internet-facing servers',
+            'Mirai-style IoT botnet looking for default credentials on Telnet/SSH',
+        ],
+        blockEffects: [
+            'Brute force attempts stop immediately',
+            'Server CPU and connection tables are freed up',
+            'The attacker\'s progress is lost and they cannot resume',
+            'They may switch IPs — watch for the same pattern from new sources',
+            'False positive risk is very low for this alert type',
+        ],
+        noBlockEffects: [
+            'Automated tool keeps guessing passwords — if it succeeds, attacker gains full access',
+            'Continuous failed logins fill your authentication logs',
+            'High connection rate may degrade server performance',
+            'Account lockout policies (if enabled) may lock legitimate users out',
+        ],
+    },
+    TRAFFIC_SPIKE: {
+        severity: 'HIGH',
+        icon: 'bi-graph-up-arrow',
+        color: 'danger',
+        title: 'Traffic Spike / Flood',
+        summary: 'This IP is sending an unusually high number of packets in a very short time — more than 100 packets in 5 seconds. This can indicate a flood or Denial-of-Service attack, or it may be a legitimate high-bandwidth device.',
+        causes: [
+            'UDP or ICMP flood attack trying to consume your bandwidth',
+            'SYN flood exhausting your server\'s TCP connection tables',
+            'Amplification/reflection DDoS traffic bounced at you',
+            'Legitimate video streaming, backup job, or cloud sync from one device (check the IP)',
+            'Misconfigured game server or P2P client sending bursts',
+        ],
+        blockEffects: [
+            'If attacker: flood stops immediately, CPU and bandwidth recover',
+            'If legitimate device (backup server, NAS): ALL traffic from it stops — services may break',
+            'Check the IP in your network before confirming block',
+            'Block is session-only — restart IDS to clear if you blocked by mistake',
+        ],
+        noBlockEffects: [
+            'If it is an attack: continued bandwidth consumption may slow or crash services',
+            'Other users on the network may experience degraded performance',
+            'Repeated HIGH alerts from this IP will keep triggering the block-request popup',
+        ],
+    },
+    SYN_SCAN: {
+        severity: 'MEDIUM',
+        icon: 'bi-cursor',
+        color: 'warning',
+        title: 'SYN Scan (Stealth Scan)',
+        summary: 'This IP sent more than 20 TCP SYN packets in 10 seconds without completing the handshake. This rate-based detection avoids false positives from normal connections — a true SYN scan floods many ports rapidly to silently map which ones are open.',
+        causes: [
+            'Nmap -sS stealth scan — the most common network mapping technique',
+            'Pre-attack reconnaissance before a targeted exploit',
+            'Legitimate monitoring tools (Nagios, Zabbix) checking host availability',
+            'Retransmitted packets from an unstable connection (rare false positive)',
+        ],
+        blockEffects: [
+            'Scanner gets no more responses — your ports appear fully filtered/closed',
+            'If from a monitoring tool, it will report your host as "down"',
+            'SYN scans alone are harmless but often precede a full attack',
+        ],
+        noBlockEffects: [
+            'Attacker learns which ports appear open vs filtered',
+            'Typically followed by a more targeted attack on an open port',
+        ],
+    },
+    SUSPICIOUS_PORT: {
+        severity: 'MEDIUM',
+        icon: 'bi-exclamation-diamond',
+        color: 'warning',
+        title: 'Suspicious Port Traffic',
+        summary: 'Traffic was detected on a port commonly associated with malware, remote-access tools, or hacking frameworks (4444, 1337, 6666, 9999). Legitimate software rarely uses these ports.',
+        causes: [
+            'Active Metasploit reverse shell on port 4444 — a device may already be compromised',
+            'Remote Access Trojan (RAT) communicating with a command-and-control server',
+            'IRC-based botnet receiving commands via port 6666',
+            'Developer accidentally running something on a hacker-associated port (false positive)',
+        ],
+        blockEffects: [
+            'Cuts the C2 (command-and-control) channel — malware cannot receive new commands',
+            'Does NOT remove malware — investigate the device that generated the traffic',
+            'If from an internal developer, dismiss and whitelist instead',
+        ],
+        noBlockEffects: [
+            'If malware: it retains full communication with its operator',
+            'Attacker can issue further commands (data exfiltration, lateral movement)',
+        ],
+    },
+    LARGE_PACKET: {
+        severity: 'LOW',
+        icon: 'bi-box-arrow-up-right',
+        color: 'info',
+        title: 'Unusually Large Packet',
+        summary: 'A packet larger than 1500 bytes (standard Ethernet MTU) was detected. This is low-priority on its own but may indicate data exfiltration or evasion techniques when combined with other alert types.',
+        causes: [
+            'Data exfiltration — packing stolen data into large packets',
+            'Fragmentation-based IDS evasion technique',
+            'Jumbo frames on a high-speed network (legitimate — raise the threshold in Settings)',
+            'VPN or tunnel encapsulation adding extra header overhead',
+        ],
+        blockEffects: [
+            'Low urgency — usually not worth blocking for large packets alone',
+            'If this IP also has HIGH alerts, blocking addresses the bigger threat too',
+            'If from a NAS or backup server, blocking breaks those services',
+        ],
+        noBlockEffects: [
+            'Alone, large packets are rarely dangerous',
+            'Monitor if the same IP also triggers HIGH alerts',
+        ],
+    },
+};
+
+const SEVERITY_CLASS = {HIGH:'danger', MEDIUM:'warning', LOW:'info', INFO:'secondary'};
+const TYPE_COLORS = {
+    PORT_SCAN:'#dc3545', BRUTE_FORCE:'#c82333', TRAFFIC_SPIKE:'#e83e8c',
+    SYN_SCAN:'#ffc107', SUSPICIOUS_PORT:'#fd7e14',
+    LARGE_PACKET:'#0dcaf0', SYSTEM:'#6c757d'
+};
+
+// Extract IP from URL
+const urlParams = new URLSearchParams(window.location.search);
+const TARGET_IP = urlParams.get('ip') || '{{ ip }}';
+
+document.getElementById('ipTitle').textContent = TARGET_IP || '(no IP)';
+
+// Chart
+const chartCtx = document.getElementById('typeBreakdownChart').getContext('2d');
+const typeChart = new Chart(chartCtx, {
+    type: 'doughnut',
+    data: { labels: [], datasets: [{ data: [], backgroundColor: [] }] },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position:'bottom', labels:{ color:'#ccc', padding:8 } } }
+    }
+});
+
+function severityBadge(sev) {
+    const cls = SEVERITY_CLASS[sev] || 'secondary';
+    return `<span class="badge bg-${cls}">${sev}</span>`;
+}
+
+function renderExplainPanel(detail) {
+    // Find the dominant HIGH type, else the most frequent type
+    const tc = detail.type_counts || {};
+    const highTypes = ['PORT_SCAN','BRUTE_FORCE','TRAFFIC_SPIKE'];
+    let dominant = highTypes.find(t => tc[t] > 0)
+        || Object.entries(tc).sort((a,b) => b[1]-a[1]).map(e=>e[0])[0]
+        || null;
+
+    const kb = dominant ? THREAT_KB[dominant] : null;
+    const header = document.getElementById('explainHeader');
+    const body   = document.getElementById('explainBody');
+
+    if (!kb) {
+        header.innerHTML = '<i class="bi bi-info-circle me-2"></i>Threat Analysis';
+        body.innerHTML   = '<p class="text-muted">No threat knowledge available for the detected alert types.</p>';
+        return;
+    }
+
+    header.innerHTML = `<i class="bi ${kb.icon} me-2 text-${kb.color}"></i>
+        <span class="badge bg-${kb.color} me-2">${kb.severity}</span>
+        Analysis: <strong>${kb.title}</strong>`;
+
+    // Build causes list + alert type summary
+    const typeRows = Object.entries(tc)
+        .sort((a,b) => b[1]-a[1])
+        .map(([t,c]) => {
+            const kbItem = THREAT_KB[t];
+            const sev = kbItem?.severity || 'INFO';
+            return `<tr>
+                <td><code>${t}</code></td>
+                <td class="text-center">${severityBadge(sev)}</td>
+                <td class="text-center fw-bold">${c}</td>
+            </tr>`;
+        }).join('');
+
+    body.innerHTML = `
+        <p class="text-muted small mb-3">${kb.summary}</p>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <h6 class="text-warning small"><i class="bi bi-bug me-1"></i>Possible causes</h6>
+                <ul class="small text-muted ps-3">
+                    ${kb.causes.map(c => `<li>${c}</li>`).join('')}
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-info small"><i class="bi bi-list-check me-1"></i>Alert types detected from this IP</h6>
+                <table class="table table-dark table-sm small mb-0">
+                    <thead><tr><th>Type</th><th class="text-center">Severity</th><th class="text-center">Count</th></tr></thead>
+                    <tbody>${typeRows}</tbody>
+                </table>
+            </div>
+        </div>`;
+
+    // Fill block effects panel from dominant threat
+    const blockList = document.getElementById('blockEffectsList');
+    const noBlockList = document.getElementById('noBlockEffectsList');
+    blockList.innerHTML   = kb.blockEffects.map(e => `<li>${e}</li>`).join('');
+    noBlockList.innerHTML = kb.noBlockEffects.map(e => `<li>${e}</li>`).join('');
+
+    // OS commands
+    document.getElementById('winCmd').textContent =
+        `netsh advfirewall firewall add rule name="Block ${TARGET_IP}" dir=in action=block remoteip=${TARGET_IP}`;
+    document.getElementById('linCmd').textContent =
+        `iptables -A INPUT -s ${TARGET_IP} -j DROP`;
+}
+
+function renderHistoryTable(alerts) {
+    const body = document.getElementById('historyBody');
+    if (!alerts.length) {
+        body.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No alert history found</td></tr>';
+        return;
+    }
+    body.innerHTML = alerts.map(a => {
+        const kb = THREAT_KB[a.type];
+        const explanation = kb
+            ? `<small class="text-muted">${kb.summary.substring(0,90)}…
+               <a href="/threat-guide#${a.type.toLowerCase().replace('_','-')}" target="_blank" class="text-info ms-1">Guide</a></small>`
+            : '';
+        return `<tr>
+            <td class="text-nowrap">${a.timestamp || ''}</td>
+            <td><code>${a.type}</code></td>
+            <td>${severityBadge(a.severity)}</td>
+            <td>${a.message || ''}</td>
+            <td>${explanation}</td>
+        </tr>`;
+    }).join('');
+}
+
+function updateBlockButton(detail) {
+    const blockBtn   = document.getElementById('blockBtn');
+    const unblockBtn = document.getElementById('unblockBtn');
+    const note       = document.getElementById('actionNote');
+    const statusEl   = document.getElementById('statStatus');
+
+    if (detail.is_blocked) {
+        blockBtn.style.display   = 'none';
+        unblockBtn.style.display = '';
+        note.textContent = 'This IP is currently blocked — all packets from it are dropped.';
+        statusEl.innerHTML = '<span class="text-danger"><i class="bi bi-slash-circle me-1"></i>Blocked</span>';
+    } else if (detail.is_pending) {
+        blockBtn.style.display   = 'none';
+        unblockBtn.style.display = 'none';
+        note.textContent = 'A block request is pending — check the notification banner at the top of the page.';
+        statusEl.innerHTML = '<span class="text-warning"><i class="bi bi-hourglass-split me-1"></i>Block Pending</span>';
+    } else {
+        blockBtn.style.display   = '';
+        unblockBtn.style.display = 'none';
+        note.textContent = 'Blocking is session-only and can be undone at any time.';
+        statusEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Active (not blocked)</span>';
+    }
+}
+
+function loadDetail() {
+    if (!TARGET_IP) {
+        document.getElementById('notFoundMsg').style.display = '';
+        return;
+    }
+
+    fetch(`/api/ip_detail/${encodeURIComponent(TARGET_IP)}`)
+        .then(r => r.json())
+        .then(detail => {
+            if (!detail.recent_alerts || detail.recent_alerts.length === 0) {
+                document.getElementById('notFoundMsg').style.display = '';
+                return;
+            }
+
+            // Show sections
+            document.getElementById('statCards').style.display = '';
+            document.getElementById('mainContent').style.display = '';
+
+            // Stat cards
+            document.getElementById('statTotal').textContent = detail.total_alerts;
+            document.getElementById('statHigh').textContent  = detail.high_alerts;
+            document.getElementById('statFirst').textContent = detail.first_seen || '—';
+
+            // Chart
+            const tc = detail.type_counts || {};
+            const labels = Object.keys(tc);
+            typeChart.data.labels = labels;
+            typeChart.data.datasets[0].data = labels.map(l => tc[l]);
+            typeChart.data.datasets[0].backgroundColor = labels.map(l => TYPE_COLORS[l] || '#6c757d');
+            typeChart.update();
+
+            // Explain panel + block effects
+            renderExplainPanel(detail);
+
+            // Block button state
+            updateBlockButton(detail);
+
+            // History table
+            renderHistoryTable(detail.recent_alerts || []);
+        })
+        .catch(() => {
+            document.getElementById('notFoundMsg').style.display = '';
+        });
+}
+
+// Block / Unblock actions
+document.getElementById('blockBtn').addEventListener('click', () => {
+    fetch('/api/blocklist', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ip: TARGET_IP, action: 'block'})
+    }).then(() => loadDetail());
+});
+
+document.getElementById('unblockBtn').addEventListener('click', () => {
+    fetch('/api/blocklist', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ip: TARGET_IP, action: 'unblock'})
+    }).then(() => loadDetail());
+});
+
+document.getElementById('refreshBtn').addEventListener('click', loadDetail);
+
+// Initial load + auto-refresh
+loadDetail();
+setInterval(loadDetail, 10000);
+</script>
+{% endblock %}

@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+
+{% block title %}Threat Guide — IDS Dashboard{% endblock %}
+{% block page_title %}Threat Guide{% endblock %}
+
+{% block content %}
+
+<!-- Intro banner -->
+<div class="alert alert-info d-flex gap-3 align-items-start mb-4">
+    <i class="bi bi-info-circle-fill fs-4 mt-1"></i>
+    <div>
+        <strong>What is this page?</strong><br>
+        This guide explains every <span class="badge bg-danger">HIGH</span> severity alert your IDS can raise —
+        what caused it, what an attacker might be doing, and exactly what happens when you block that IP.
+    </div>
+</div>
+
+<!-- Quick nav pills -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+    <a href="#port-scan"     class="btn btn-sm btn-outline-danger">Port Scan</a>
+    <a href="#brute-force"   class="btn btn-sm btn-outline-danger">Brute Force</a>
+    <a href="#traffic-spike" class="btn btn-sm btn-outline-danger">Traffic Spike</a>
+    <a href="#syn-scan"      class="btn btn-sm btn-outline-warning">SYN Scan</a>
+    <a href="#susp-port"     class="btn btn-sm btn-outline-warning">Suspicious Port</a>
+    <a href="#large-packet"  class="btn btn-sm btn-outline-info">Large Packet</a>
+    <a href="#block-effects" class="btn btn-sm btn-outline-secondary">Blocking Effects</a>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     HIGH SEVERITY
+═══════════════════════════════════════════════════ -->
+<h5 class="text-danger mb-3"><i class="bi bi-radioactive me-2"></i>HIGH Severity Alerts</h5>
+
+<!-- PORT SCAN -->
+<div class="card mb-4 border-danger" id="port-scan">
+    <div class="card-header bg-danger bg-opacity-10 d-flex align-items-center gap-2">
+        <span class="badge bg-danger">HIGH</span>
+        <i class="bi bi-radar"></i>
+        <strong>PORT_SCAN — Port Scan Detected</strong>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+
+            <div class="col-md-4">
+                <h6 class="text-warning"><i class="bi bi-question-circle me-1"></i>Why does this alert appear?</h6>
+                <p class="text-muted small">
+                    A single IP address sent packets to <strong>more than 15 different ports</strong> on your machine
+                    in a short time. The IDS counts unique destination ports per source IP; once the count exceeds
+                    the threshold, the alert fires and the counter resets.
+                </p>
+                <p class="text-muted small">
+                    Threshold is configurable in <strong>Settings → Port Scan Threshold</strong> (default: 15).
+                </p>
+            </div>
+
+            <div class="col-md-4">
+                <h6 class="text-danger"><i class="bi bi-bug me-1"></i>What could be causing it?</h6>
+                <ul class="small text-muted">
+                    <li><strong>Reconnaissance scan</strong> — an attacker is mapping which services are running before attempting an exploit.</li>
+                    <li><strong>Automated scanner</strong> (Nmap, Masscan, ZMap) probing your IP range.</li>
+                    <li><strong>Vulnerability scanner</strong> (Nessus, OpenVAS) — could be legitimate IT security testing.</li>
+                    <li><strong>Worm/malware</strong> on another device on your network spreading laterally.</li>
+                    <li><strong>Misconfigured device</strong> retrying many ports repeatedly.</li>
+                </ul>
+            </div>
+
+            <div class="col-md-4">
+                <h6 class="text-info"><i class="bi bi-slash-circle me-1"></i>What happens if you block the IP?</h6>
+                <div class="small text-muted">
+                    <p>✅ <strong>Safe to block in almost all cases.</strong></p>
+                    <ul>
+                        <li>All future packets from that IP are <strong>silently dropped</strong> before any detection runs.</li>
+                        <li>The scan stops immediately — the attacker gets no responses, making your ports appear "filtered".</li>
+                        <li>If it was a legitimate scanner (IT team, security audit), unblock it from the Alerts page.</li>
+                        <li>Internal network devices (printers, IoT) could trigger this if misconfigured — verify the IP before blocking.</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- BRUTE FORCE -->
+<div class="card mb-4 border-danger" id="brute-force">
+    <div class="card-header bg-danger bg-opacity-10 d-flex align-items-center gap-2">
+        <span class="badge bg-danger">HIGH</span>
+        <i class="bi bi-key"></i>
+        <strong>BRUTE_FORCE — Brute Force Attack</strong>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+
+            <div class="col-md-4">
+                <h6 class="text-warning"><i class="bi bi-question-circle me-1"></i>Why does this alert appear?</h6>
+                <p class="text-muted small">
+                    A single IP made <strong>more than 10 connection attempts to an authentication port</strong>
+                    within a 10-second window.
+                </p>
+                <p class="text-muted small">
+                    Monitored ports (login services):
+                </p>
+                <div class="d-flex flex-wrap gap-1">
+                    {% for port, service in [
+                        (21,'FTP'),(22,'SSH'),(23,'Telnet'),(25,'SMTP'),
+                        (110,'POP3'),(143,'IMAP'),(389,'LDAP'),
+                        (445,'SMB'),(3389,'RDP'),(5900,'VNC')
+                    ] %}
+                    <span class="badge bg-secondary">{{ port }} <small>{{ service }}</small></span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <h6 class="text-danger"><i class="bi bi-bug me-1"></i>What could be causing it?</h6>
+                <ul class="small text-muted">
+                    <li><strong>Automated credential stuffing</strong> — bot trying millions of username/password combos from a leaked database.</li>
+                    <li><strong>Dictionary attack</strong> — trying common passwords (admin, 123456, password…).</li>
+                    <li><strong>Targeted SSH/RDP brute force</strong> — very common against internet-facing Linux/Windows servers.</li>
+                    <li><strong>Mirai-style IoT botnet</strong> scanning for default credentials on Telnet/SSH.</li>
+                    <li><strong>Misconfigured backup software</strong> retrying failed logins repeatedly (rare false positive).</li>
+                </ul>
+            </div>
+
+            <div class="col-md-4">
+                <h6 class="text-info"><i class="bi bi-slash-circle me-1"></i>What happens if you block the IP?</h6>
+                <div class="small text-muted">
+                    <p>✅ <strong>Highly recommended to block.</strong></p>
+                    <ul>
+                        <li>Stops the brute force immediately — the attacker gets TCP RST or timeout instead of a login prompt.</li>
+                        <li>Reduces server load from thousands of authentication attempts.</li>
+                        <li>The attacker's progress is lost — they cannot resume the same session.</li>
+                        <li>They may switch to a different IP — watch for the same pattern from new sources.</li>
+                        <li>False positive risk is very low for this alert type.</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- TRAFFIC SPIKE -->
+<div class="card mb-4 border-danger" id="traffic-spike">
+    <div class="card-header bg-danger bg-opacity-10 d-flex align-items-center gap-2">
+        <span class="badge bg-danger">HIGH</span>
+        <i class="bi bi-graph-up-arrow"></i>
+        <strong>TRAFFIC_SPIKE — High Traffic Rate</strong>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+
+            <div class="col-md-4">
+                <h6 class="text-warning"><i class="bi bi-question-circle me-1"></i>Why does this alert appear?</h6>
+                <p class="text-muted small">
+                    A single IP sent <strong>more than 100 packets within 5 seconds</strong>.
+                    That equals 20+ packets per second from one source — far above normal browsing traffic.
+                </p>
+                <p class="text-muted small">
+                    This is the alert most likely to trigger the <strong>block request popup</strong>
+                    you see at the top of the dashboard, since it fires repeatedly from flood sources.
+                    After <strong>3 HIGH alerts</strong> from the same IP, a block confirmation is raised.
+                </p>
+                <p class="text-muted small">
+                    Thresholds adjustable in <strong>Settings → Packet Rate Threshold / Traffic Time Window</strong>.
+                </p>
+            </div>
+
+            <div class="col-md-4">
+                <h6 class="text-danger"><i class="bi bi-bug me-1"></i>What could be causing it?</h6>
+                <ul class="small text-muted">
+                    <li><strong>UDP/ICMP flood (DoS)</strong> — attacker trying to overwhelm your bandwidth or CPU.</li>
+                    <li><strong>SYN flood</strong> — sending thousands of half-open TCP connections to exhaust connection tables.</li>
+                    <li><strong>Amplification attack</strong> — reflected traffic from DNS/NTP servers bounced at you.</li>
+                    <li><strong>Video streaming / large file transfer</strong> from a single device (legitimate, adjust threshold).</li>
+                    <li><strong>Backup job or cloud sync</strong> running on a local machine (false positive — check IP first).</li>
+                    <li><strong>Misconfigured game server or P2P client</strong> sending bursts.</li>
+                </ul>
+            </div>
+
+            <div class="col-md-4">
+                <h6 class="text-info"><i class="bi bi-slash-circle me-1"></i>What happens if you block the IP?</h6>
+                <div class="small text-muted">
+                    <p>⚠️ <strong>Check the IP before blocking — false positive risk is moderate.</strong></p>
+                    <ul>
+                        <li>Blocking an <strong>external attacker</strong>: flood stops, CPU and bandwidth recover immediately.</li>
+                        <li>Blocking a <strong>local backup server or NAS</strong>: that device's traffic will be completely silenced — you'll lose access to it too. Unblock from the Alerts page.</li>
+                        <li>Blocking a <strong>streaming device</strong>: video/stream will stop working from that IP.</li>
+                        <li>The block only applies <strong>within this IDS session</strong> — it does not add a firewall rule to your OS. Restart the IDS and the block is cleared.</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MEDIUM SEVERITY
+═══════════════════════════════════════════════════ -->
+<h5 class="text-warning mb-3 mt-2"><i class="bi bi-exclamation-diamond me-2"></i>MEDIUM Severity Alerts</h5>
+
+<!-- SYN SCAN -->
+<div class="card mb-4 border-warning" id="syn-scan">
+    <div class="card-header bg-warning bg-opacity-10 d-flex align-items-center gap-2">
+        <span class="badge bg-warning text-dark">MEDIUM</span>
+        <i class="bi bi-cursor"></i>
+        <strong>SYN_SCAN — TCP SYN Scan</strong>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+
+            <div class="col-md-4">
+                <h6 class="text-warning"><i class="bi bi-question-circle me-1"></i>Why does this alert appear?</h6>
+                <p class="text-muted small">
+                    More than <strong>20 TCP SYN-only packets</strong> arrived from this IP within 10 seconds
+                    without completing the handshake. Normal connections go SYN → SYN-ACK → ACK.
+                    A SYN scan floods SYN packets to many ports, notes which ones reply, then never sends ACK —
+                    so the connection is never established and many systems don't log it.
+                </p>
+            </div>
+
+            <div class="col-md-4">
+                <h6 class="text-danger"><i class="bi bi-bug me-1"></i>What could be causing it?</h6>
+                <ul class="small text-muted">
+                    <li><strong>Nmap -sS (stealth scan)</strong> — the most common network scanner technique.</li>
+                    <li><strong>Pre-attack reconnaissance</strong> — identifying open ports before exploitation.</li>
+                    <li><strong>Legitimate network monitoring tools</strong> like Zabbix or Nagios checking host availability.</li>
+                    <li><strong>Retransmitted packets</strong> from a slow or unreliable connection (rare false positive).</li>
+                </ul>
+            </div>
+
+            <div class="col-md-4">
+                <h6 class="text-info"><i class="bi bi-slash-circle me-1"></i>What happens if you block the IP?</h6>
+                <div class="small text-muted">
+                    <p>✅ <strong>Generally safe to block if from an external unknown IP.</strong></p>
+                    <ul>
+                        <li>The scanner gets no more responses — your ports appear completely filtered/closed.</li>
+                        <li>If from a <strong>monitoring tool</strong> (Nagios, Zabbix), blocking it will make your host appear "down" in that system.</li>
+                        <li>SYN scans alone don't harm you — but they are often a precursor to a targeted attack, so blocking is a good precaution.</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- SUSPICIOUS PORT -->
+<div class="card mb-4 border-warning" id="susp-port">
+    <div class="card-header bg-warning bg-opacity-10 d-flex align-items-center gap-2">
+        <span class="badge bg-warning text-dark">MEDIUM</span>
+        <i class="bi bi-exclamation-diamond"></i>
+        <strong>SUSPICIOUS_PORT — Known Malware Port</strong>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+
+            <div class="col-md-4">
+                <h6 class="text-warning"><i class="bi bi-question-circle me-1"></i>Why does this alert appear?</h6>
+                <p class="text-muted small">
+                    Traffic was detected going to a port from a hardcoded suspicious list:
+                </p>
+                <table class="table table-dark table-sm small mb-0">
+                    <thead><tr><th>Port</th><th>Known for</th></tr></thead>
+                    <tbody>
+                        <tr><td>4444</td><td>Metasploit Framework default shell</td></tr>
+                        <tr><td>1337</td><td>Generic hacker/C2 tool convention</td></tr>
+                        <tr><td>6666</td><td>IRC botnets, some RATs</td></tr>
+                        <tr><td>9999</td><td>Generic backdoor / C2 servers</td></tr>
+                    </tbody>
+                </table>
+                <p class="text-muted small mt-2">Add more ports in <strong>config.py → SUSPICIOUS_PORTS</strong>.</p>
+            </div>
+
+            <div class="col-md-4">
+                <h6 class="text-danger"><i class="bi bi-bug me-1"></i>What could be causing it?</h6>
+                <ul class="small text-muted">
+                    <li><strong>Active Metasploit session</strong> — an attacker has already compromised a machine and is using port 4444 for a reverse shell.</li>
+                    <li><strong>Remote Access Trojan (RAT)</strong> phoning home on port 6666 or 9999.</li>
+                    <li><strong>IRC-based botnet</strong> receiving commands on port 6666.</li>
+                    <li><strong>Developer testing</strong> — a developer running something like <code>python -m http.server 4444</code> (false positive).</li>
+                </ul>
+            </div>
+
+            <div class="col-md-4">
+                <h6 class="text-info"><i class="bi bi-slash-circle me-1"></i>What happens if you block the IP?</h6>
+                <div class="small text-muted">
+                    <p>✅ <strong>Block if you don't recognise the IP or the activity.</strong></p>
+                    <ul>
+                        <li>Cuts off the C2 channel — if malware on your network is phoning home, blocking the C2 server IP breaks the connection.</li>
+                        <li>Does <strong>not</strong> remove the malware — you still need to investigate the machine that generated the traffic.</li>
+                        <li>If from <strong>internal developer traffic</strong>, dismiss and update your suspicious ports list instead.</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     LOW SEVERITY
+═══════════════════════════════════════════════════ -->
+<h5 class="text-info mb-3 mt-2"><i class="bi bi-info-circle me-2"></i>LOW Severity Alerts</h5>
+
+<!-- LARGE PACKET -->
+<div class="card mb-4 border-info" id="large-packet">
+    <div class="card-header bg-info bg-opacity-10 d-flex align-items-center gap-2">
+        <span class="badge bg-info text-dark">LOW</span>
+        <i class="bi bi-box-arrow-up-right"></i>
+        <strong>LARGE_PACKET — Unusually Large Packet</strong>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+
+            <div class="col-md-4">
+                <h6 class="text-warning"><i class="bi bi-question-circle me-1"></i>Why does this alert appear?</h6>
+                <p class="text-muted small">
+                    A single packet exceeded <strong>1500 bytes</strong> — the standard Ethernet MTU
+                    (Maximum Transmission Unit). Normal traffic is fragmented to stay under this size.
+                    Packets over 1500 bytes are called "jumbo frames" and are unusual outside of
+                    specially configured networks.
+                </p>
+                <p class="text-muted small">Threshold adjustable in <strong>Settings → Large Packet Size</strong>.</p>
+            </div>
+
+            <div class="col-md-4">
+                <h6 class="text-danger"><i class="bi bi-bug me-1"></i>What could be causing it?</h6>
+                <ul class="small text-muted">
+                    <li><strong>Data exfiltration</strong> — attacker packing as much stolen data as possible into each packet to reduce the number of connections.</li>
+                    <li><strong>Fragmentation evasion</strong> — crafting oversized packets to confuse IDS/firewall fragmentation reassembly.</li>
+                    <li><strong>Jumbo frames</strong> — legitimate high-speed networks (storage, 10Gbe) configured with larger MTU (raise your threshold).</li>
+                    <li><strong>VPN or tunnel overhead</strong> — encapsulation adding extra headers pushes packets over 1500 bytes.</li>
+                </ul>
+            </div>
+
+            <div class="col-md-4">
+                <h6 class="text-info"><i class="bi bi-slash-circle me-1"></i>What happens if you block the IP?</h6>
+                <div class="small text-muted">
+                    <p>⚠️ <strong>Low priority — investigate before blocking.</strong></p>
+                    <ul>
+                        <li>A single large packet is almost never an emergency on its own.</li>
+                        <li>If the same IP also triggered HIGH alerts (port scan, brute force, traffic spike), blocking is justified.</li>
+                        <li>If it's from a <strong>backup server, NAS, or VPN</strong>, blocking will break those services.</li>
+                        <li>Consider raising the <strong>Large Packet Size</strong> threshold in Settings instead of blocking legitimate devices.</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     BLOCKING EFFECTS SUMMARY
+═══════════════════════════════════════════════════ -->
+<div class="card border-secondary mb-4" id="block-effects">
+    <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-shield-lock"></i>
+        <strong>What exactly happens when you block an IP?</strong>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+
+            <div class="col-md-6">
+                <h6 class="text-success"><i class="bi bi-check2-circle me-1"></i>What blocking DOES do</h6>
+                <ul class="small text-muted">
+                    <li>All packets from that IP are <strong>dropped at the IDS input stage</strong> — before any detection logic runs, saving CPU.</li>
+                    <li>The IP is added to the <strong>in-memory blocked list</strong> visible on the Alerts page.</li>
+                    <li>A <strong>SYSTEM log entry</strong> is recorded with timestamp and reason.</li>
+                    <li>No further alerts will fire from that IP for the rest of the session.</li>
+                </ul>
+            </div>
+
+            <div class="col-md-6">
+                <h6 class="text-danger"><i class="bi bi-x-circle me-1"></i>What blocking does NOT do</h6>
+                <ul class="small text-muted">
+                    <li><strong>Does not add a firewall rule</strong> to Windows Defender Firewall, iptables, or any OS-level firewall. If the IDS is stopped, traffic from that IP flows freely again.</li>
+                    <li><strong>Does not persist across restarts</strong> — the blocked list is in memory only. Restart the IDS and all blocks are cleared.</li>
+                    <li><strong>Does not notify the attacker</strong> — packets are silently dropped, not rejected. The attacker may keep sending for a while.</li>
+                    <li><strong>Does not stop the attacker from switching IPs</strong> — a determined attacker can use a different address.</li>
+                </ul>
+            </div>
+
+            <div class="col-12">
+                <div class="alert alert-secondary small mb-0">
+                    <i class="bi bi-lightbulb me-1"></i>
+                    <strong>Tip:</strong> For a <em>permanent</em> block, use your OS firewall after confirming the threat.
+                    On Windows: <code>netsh advfirewall firewall add rule name="Block &lt;IP&gt;" dir=in action=block remoteip=&lt;IP&gt;</code>.
+                    On Linux: <code>iptables -A INPUT -s &lt;IP&gt; -j DROP</code>.
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Live HIGH alerts from current session -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-radioactive me-2"></i>Current HIGH Alerts in This Session</span>
+        <button class="btn btn-sm btn-outline-secondary" id="refreshHighAlerts">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Alert Type</th>
+                        <th>Source IP</th>
+                        <th>Message</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="highAlertsBody">
+                    <tr><td colspan="5" class="text-center text-muted py-3">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let blockedIPs = new Set();
+
+    function fetchBlocklist() {
+        fetch('/api/blocklist').then(r => r.json()).then(d => {
+            blockedIPs = new Set(d.blocked_ips || []);
+        });
+    }
+
+    function blockIP(ip) {
+        fetch('/api/blocklist', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ip, action: 'block'})
+        }).then(() => { fetchBlocklist(); fetchHighAlerts(); });
+    }
+
+    function fetchHighAlerts() {
+        fetch('/api/alerts').then(r => r.json()).then(data => {
+            const high = data.filter(a => a.severity === 'HIGH').slice(0, 30);
+            const body = document.getElementById('highAlertsBody');
+            if (!high.length) {
+                body.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No HIGH alerts in this session</td></tr>';
+                return;
+            }
+            body.innerHTML = high.map(a => {
+                const isBlocked = blockedIPs.has(a.src_ip);
+                const btn = a.src_ip && a.src_ip !== 'N/A'
+                    ? `<button class="btn btn-outline-danger btn-sm py-0 px-1 block-btn" data-ip="${a.src_ip}"
+                           ${isBlocked ? 'disabled title="Already blocked"' : ''}>
+                           <i class="bi bi-slash-circle"></i> ${isBlocked ? 'Blocked' : 'Block'}
+                       </button>`
+                    : '';
+                return `<tr>
+                    <td>${a.timestamp}</td>
+                    <td><code>${a.type}</code></td>
+                    <td><code>${a.src_ip}</code></td>
+                    <td>${a.message}</td>
+                    <td>${btn}</td>
+                </tr>`;
+            }).join('');
+
+            document.querySelectorAll('.block-btn').forEach(btn => {
+                btn.addEventListener('click', () => blockIP(btn.dataset.ip));
+            });
+        });
+    }
+
+    document.getElementById('refreshHighAlerts').addEventListener('click', () => {
+        fetchBlocklist();
+        fetchHighAlerts();
+    });
+
+    fetchBlocklist();
+    fetchHighAlerts();
+    setInterval(() => { fetchBlocklist(); fetchHighAlerts(); }, 8000);
+</script>
+{% endblock %}
