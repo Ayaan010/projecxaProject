@@ -57,7 +57,7 @@ class PacketSniffer:
 
         # Send data to detection engine if callback exists
         if self.packet_callback:
-            self.packet_callback(parsed_data)
+            self.packet_callback(packet)  # pass raw Scapy packet for parser
         else:
             self.default_output(parsed_data)
 

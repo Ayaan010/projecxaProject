@@ -11,6 +11,7 @@ import sys
 import os
 import threading
 import time
+from waitress import serve
 
 # Ensure project root is on the path
 sys.path.insert(0, os.path.dirname(__file__))
@@ -51,6 +52,12 @@ def start_ids_background():
         if not parser.validate(parsed):
             return
 
+        src_ip = parsed.get("src_ip")
+
+        # Skip packets from auto-blocked IPs
+        if src_ip and ids_state.is_blocked(src_ip):
+            return
+
         # Feed traffic stats
         ids_state.record_packet(parsed.get("protocol", "OTHER"))
 
@@ -62,7 +69,32 @@ def start_ids_background():
             alert["severity"] = severity_map.get(alert.get("type"), "INFO")
             ids_state.record_alert(alert)
             alert_system.raise_alert(alert)
-            
+
+            # Ask user to confirm block when IP repeatedly triggers HIGH alerts
+            if config.ENABLE_AUTO_BLOCK and src_ip:
+                if ids_state.should_request_block(src_ip, config.AUTO_BLOCK_THRESHOLD):
+                    ids_state.request_block(
+                        src_ip,
+                        f"Triggered {config.AUTO_BLOCK_THRESHOLD}+ HIGH alerts"
+                    )
+                    notify_alert = {
+                        "type": "SYSTEM",
+                        "src_ip": src_ip,
+                        "message": (
+                            f"Block request raised for {src_ip} — "
+                            f"{config.AUTO_BLOCK_THRESHOLD} HIGH alerts detected. "
+                            "Approve in the dashboard."
+                        ),
+                        "severity": "INFO",
+                    }
+                    ids_state.record_alert(notify_alert)
+                    alert_system.raise_alert(notify_alert)
+                    db.insert_system_log(
+                        "BLOCK_REQUEST",
+                        f"Block request raised for {src_ip} — awaiting user confirmation",
+                        "WARNING",
+                    )
+
             # Save to database
             alert_data = {
                 'alert_type': alert.get('type', 'Unknown'),
@@ -104,6 +136,12 @@ def start_ids_background():
 
 
 def main():
+    # Ensure logs directory exists on every machine
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs"), exist_ok=True)
+
+    if config.DASHBOARD_PASSWORD == "changeme":
+        print("[!] WARNING: Default password in use. Set IDS_PASSWORD env var before exposing to a network.")
+
     with_ids = "--with-ids" in sys.argv
 
     if with_ids:
@@ -114,8 +152,13 @@ def main():
         print("[*] Dashboard-only mode | Use --with-ids for live capture")
 
     app = create_app()
-    print("[*] Dashboard is running at http://127.0.0.1:5000")
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    host = config.DASHBOARD_HOST
+    port = config.DASHBOARD_PORT
+    display_host = "127.0.0.1" if host == "0.0.0.0" else host
+    print(f"[*] Dashboard → http://{display_host}:{port}  (login: {config.DASHBOARD_USER})")
+    if host == "0.0.0.0":
+        print(f"[*] Also accessible from other PCs at http://<this-machine-ip>:{port}")
+    serve(app, host=host, port=port, threads=4)
 
 
 if __name__ == "__main__":
