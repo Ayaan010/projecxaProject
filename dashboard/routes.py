@@ -30,6 +30,9 @@ _db = DatabaseManager(config.DATABASE_PATH)
 
 @bp.before_request
 def check_auth():
+    # Demo mode with no-auth: let everyone through
+    if config.DEMO_NO_AUTH:
+        return
     auth = request.authorization
     if not auth or auth.username != config.DASHBOARD_USER or auth.password != config.DASHBOARD_PASSWORD:
         return Response(
@@ -256,6 +259,8 @@ def api_logs():
 
 @bp.route("/api/settings", methods=["POST"])
 def api_settings():
+    if config.DEMO_MODE:
+        return jsonify({"error": "Settings are read-only in demo mode"}), 403
     data = request.get_json(force=True)
     if not data:
         return jsonify({"error": "No data provided"}), 400

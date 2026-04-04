@@ -4,7 +4,8 @@ Optionally starts the IDS engine in a background thread.
 
 Usage:
     python run_dashboard.py               # dashboard only
-    python run_dashboard.py --with-ids    # dashboard + IDS capture
+    python run_dashboard.py --demo        # demo mode (simulated data, no capture needed)
+    python run_dashboard.py --with-ids    # dashboard + live IDS capture
 """
 
 import sys
@@ -139,12 +140,20 @@ def main():
     # Ensure logs directory exists on every machine
     os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs"), exist_ok=True)
 
-    if config.DASHBOARD_PASSWORD == "changeme":
+    demo_mode = "--demo" in sys.argv or config.DEMO_MODE
+    with_ids  = "--with-ids" in sys.argv
+
+    if not demo_mode and config.DASHBOARD_PASSWORD == "changeme":
         print("[!] WARNING: Default password in use. Set IDS_PASSWORD env var before exposing to a network.")
 
-    with_ids = "--with-ids" in sys.argv
-
-    if with_ids:
+    if demo_mode:
+        config.DEMO_MODE    = True   # ensure routes/templates see the flag
+        config.DEMO_NO_AUTH = True
+        print("[*] DEMO MODE — starting simulated IDS activity (no packet capture)…")
+        from demo.demo_engine import run_demo
+        _demo_db = DatabaseManager(config.DATABASE_PATH)
+        threading.Thread(target=run_demo, args=(_demo_db,), daemon=True).start()
+    elif with_ids:
         print("[*] Starting IDS engine in background thread…")
         t = threading.Thread(target=start_ids_background, daemon=True)
         t.start()
@@ -155,7 +164,10 @@ def main():
     host = config.DASHBOARD_HOST
     port = config.DASHBOARD_PORT
     display_host = "127.0.0.1" if host == "0.0.0.0" else host
-    print(f"[*] Dashboard → http://{display_host}:{port}  (login: {config.DASHBOARD_USER})")
+    if demo_mode:
+        print(f"[*] Dashboard → http://{display_host}:{port}  (no login — demo mode)")
+    else:
+        print(f"[*] Dashboard → http://{display_host}:{port}  (login: {config.DASHBOARD_USER})")
     if host == "0.0.0.0":
         print(f"[*] Also accessible from other PCs at http://<this-machine-ip>:{port}")
     serve(app, host=host, port=port, threads=4)

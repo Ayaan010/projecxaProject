@@ -112,7 +112,19 @@ DATABASE_PATH = _os.path.join(_BASE_DIR, "ids_database.db")
 
 INTERFACE          = _os.environ.get("IDS_INTERFACE", INTERFACE)
 DASHBOARD_HOST     = _os.environ.get("IDS_HOST", "0.0.0.0")
-DASHBOARD_PORT     = int(_os.environ.get("IDS_PORT", "5000"))
+# Render injects PORT; fall back to IDS_PORT, then 5000
+DASHBOARD_PORT     = int(_os.environ.get("PORT", _os.environ.get("IDS_PORT", "5000")))
 DASHBOARD_USER     = _os.environ.get("IDS_USER", "admin")
 DASHBOARD_PASSWORD = _os.environ.get("IDS_PASSWORD", "changeme")
 SECRET_KEY         = _os.environ.get("IDS_SECRET_KEY", "ids-dashboard-secret-change-me")
+
+# ================================
+# DEMO MODE  (set DEMO_MODE=true when deploying on Render / any cloud)
+# In demo mode the real packet sniffer is never started; a background
+# thread feeds simulated traffic and alerts so the dashboard is live.
+# DEMO_NO_AUTH=true (default when DEMO_MODE=true) disables HTTP Basic
+# Auth so visitors can browse without a password.
+# ================================
+DEMO_MODE    = _os.environ.get("DEMO_MODE",    "false").lower() == "true"
+DEMO_NO_AUTH = _os.environ.get("DEMO_NO_AUTH",
+                               "true" if DEMO_MODE else "false").lower() == "true"

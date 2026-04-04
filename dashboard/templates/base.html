@@ -79,6 +79,18 @@
 
     <!-- Page content -->
     <main class="content-area">
+        <!-- Demo mode banner -->
+        {% if demo_mode %}
+        <div class="alert alert-info alert-dismissible d-flex align-items-center gap-2 mx-3 mt-3 mb-0 py-2" role="alert" style="border-left: 4px solid #0dcaf0;">
+            <i class="bi bi-play-circle-fill text-info fs-5"></i>
+            <div class="small">
+                <strong>Demo Mode</strong> — This dashboard shows simulated IDS activity. No real network traffic is being captured.
+                Settings changes and block actions are disabled.
+            </div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
         <!-- Block-request notification banner -->
         <div id="blockRequestBanner" style="display:none;" class="mx-3 mt-3"></div>
 
