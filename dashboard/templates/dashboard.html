@@ -1,128 +1,468 @@
 {% extends "base.html" %}
 
 {% block title %}IDS Dashboard{% endblock %}
-{% block page_title %}Dashboard Overview{% endblock %}
+{% block page_title %}
+<span style="display:inline-flex;align-items:center;gap:8px;">
+    <span style="width:6px;height:6px;border-radius:50%;background:var(--neon-cyan);box-shadow:0 0 8px var(--neon-cyan);"></span>
+    Control Panel
+</span>
+{% endblock %}
 
 {% block content %}
-<!-- Status cards -->
-<div class="row g-3 mb-4">
-    <div class="col-xl-3 col-md-6">
-        <div class="card stat-card border-start-primary">
-            <div class="card-body">
-                <div class="stat-label">IDS Status</div>
-                <div class="stat-value" id="idsStatus">—</div>
-                <div class="stat-sub" id="idsUptime"></div>
+
+<!-- ══════════════════════════════════════════════
+     ROW 1 — Full-width System Status Hero Strip
+     ══════════════════════════════════════════════ -->
+<div class="ids-hero mb-4">
+    <!-- Animated ring + IDS status -->
+    <div class="ids-hero-status">
+        <div class="ids-ring">
+            <div class="ids-ring-inner">
+                <i class="bi bi-shield-check"></i>
             </div>
-            <div class="stat-icon"><i class="bi bi-shield-check"></i></div>
+        </div>
+        <div>
+            <div class="ids-hero-label">System Status</div>
+            <div class="ids-hero-value" id="idsStatus">—</div>
+            <div class="ids-hero-sub" id="idsUptime"></div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="card stat-card border-start-info">
-            <div class="card-body">
-                <div class="stat-label">Packets Captured</div>
-                <div class="stat-value" id="totalPackets">0</div>
-                <div class="stat-sub">total analyzed</div>
-            </div>
-            <div class="stat-icon"><i class="bi bi-box-seam"></i></div>
+
+    <div class="ids-hero-divider"></div>
+
+    <div class="ids-hero-metric">
+        <div class="ids-hero-metric-icon" style="color:var(--neon-blue);">
+            <i class="bi bi-box-seam"></i>
+        </div>
+        <div>
+            <div class="ids-hero-metric-num" id="totalPackets">0</div>
+            <div class="ids-hero-metric-label">Packets Captured</div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="card stat-card border-start-warning">
-            <div class="card-body">
-                <div class="stat-label">Total Alerts</div>
-                <div class="stat-value" id="totalAlerts">0</div>
-                <div class="stat-sub">threats detected</div>
-            </div>
-            <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
+
+    <div class="ids-hero-divider"></div>
+
+    <div class="ids-hero-metric">
+        <div class="ids-hero-metric-icon" style="color:var(--neon-yellow);">
+            <i class="bi bi-exclamation-triangle"></i>
+        </div>
+        <div>
+            <div class="ids-hero-metric-num" id="totalAlerts">0</div>
+            <div class="ids-hero-metric-label">Total Alerts</div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="card stat-card border-start-danger">
-            <div class="card-body">
-                <div class="stat-label">High Severity</div>
-                <div class="stat-value" id="highSeverity">0</div>
-                <div class="stat-sub">critical alerts</div>
+
+    <div class="ids-hero-divider"></div>
+
+    <div class="ids-hero-metric">
+        <div class="ids-hero-metric-icon" style="color:var(--neon-red);">
+            <i class="bi bi-radioactive"></i>
+        </div>
+        <div>
+            <div class="ids-hero-metric-num" id="highSeverity">0</div>
+            <div class="ids-hero-metric-label">High Severity</div>
+        </div>
+    </div>
+
+    <div class="ids-hero-live ms-auto">
+        <span class="live-dot"></span>
+        <span>LIVE</span>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PACKET INJECTOR — manual scenario triggers
+     ══════════════════════════════════════════════ -->
+<div class="card mb-4" id="injectorPanel" style="border-color:rgba(0,170,255,0.18);">
+    <div class="card-header d-flex align-items-center justify-content-between" style="cursor:pointer;" onclick="toggleInjector()">
+        <span class="d-flex align-items-center gap-2">
+            <i class="bi bi-terminal" style="color:var(--neon-blue);"></i>
+            Packet Injector
+            <span style="font-family:'JetBrains Mono',monospace;font-size:0.62rem;color:var(--text-muted);background:rgba(255,255,255,0.04);padding:1px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.07);">TEST SCENARIOS</span>
+        </span>
+        <i class="bi bi-chevron-down" id="injectorChevron" style="color:var(--text-muted);font-size:0.75rem;transition:transform 0.2s;"></i>
+    </div>
+
+    <div id="injectorBody" style="display:none;">
+        <div style="padding:16px 20px 8px;">
+            <!-- Custom IP row -->
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+                <label style="font-size:0.72rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;white-space:nowrap;">Source IP (optional):</label>
+                <input id="injectIp" type="text" placeholder="auto-generated"
+                    style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:var(--text-primary);border-radius:6px;padding:4px 12px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;width:180px;outline:none;">
+                <span id="injectFeedback" style="font-size:0.72rem;font-family:'JetBrains Mono',monospace;"></span>
             </div>
-            <div class="stat-icon"><i class="bi bi-radioactive"></i></div>
+
+            <!-- Block / Unblock IP row -->
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;padding-top:4px;border-top:1px solid rgba(255,255,255,0.05);padding-bottom:14px;">
+                <i class="bi bi-shield-slash" style="color:var(--neon-red);font-size:1rem;"></i>
+                <label style="font-size:0.72rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;white-space:nowrap;">Block / Unblock IP:</label>
+                <input id="blockIp" type="text" placeholder="e.g. 192.168.1.5"
+                    style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:var(--text-primary);border-radius:6px;padding:4px 12px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;width:185px;outline:none;">
+                <button class="inject-btn" style="--btn-color:var(--neon-red);" onclick="blockAction('block')">
+                    <i class="bi bi-shield-slash"></i> Block
+                </button>
+                <button class="inject-btn" style="--btn-color:var(--neon-cyan);" onclick="blockAction('unblock')">
+                    <i class="bi bi-shield-check"></i> Unblock
+                </button>
+                <span id="blockFeedback" style="font-size:0.72rem;font-family:'JetBrains Mono',monospace;"></span>
+            </div>
+
+            <!-- Scenario buttons -->
+            <div style="display:flex;flex-wrap:wrap;gap:10px;padding-bottom:16px;">
+                <button class="inject-btn" data-scenario="PORT_SCAN"
+                    style="--btn-color:var(--neon-red);"
+                    onclick="inject('PORT_SCAN')">
+                    <i class="bi bi-radar"></i> Port Scan
+                    <span>HIGH</span>
+                </button>
+                <button class="inject-btn" data-scenario="BRUTE_FORCE"
+                    style="--btn-color:var(--neon-red);"
+                    onclick="inject('BRUTE_FORCE')">
+                    <i class="bi bi-key"></i> Brute Force
+                    <span>HIGH</span>
+                </button>
+                <button class="inject-btn" data-scenario="TRAFFIC_SPIKE"
+                    style="--btn-color:var(--neon-red);"
+                    onclick="inject('TRAFFIC_SPIKE')">
+                    <i class="bi bi-graph-up-arrow"></i> Traffic Spike
+                    <span>HIGH</span>
+                </button>
+                <button class="inject-btn" data-scenario="SYN_SCAN"
+                    style="--btn-color:var(--neon-yellow);"
+                    onclick="inject('SYN_SCAN')">
+                    <i class="bi bi-cursor"></i> SYN Scan
+                    <span>MEDIUM</span>
+                </button>
+                <button class="inject-btn" data-scenario="SUSPICIOUS_PORT"
+                    style="--btn-color:var(--neon-yellow);"
+                    onclick="inject('SUSPICIOUS_PORT')">
+                    <i class="bi bi-exclamation-diamond"></i> Suspicious Port
+                    <span>MEDIUM</span>
+                </button>
+                <button class="inject-btn" data-scenario="LARGE_PACKET"
+                    style="--btn-color:var(--neon-blue);"
+                    onclick="inject('LARGE_PACKET')">
+                    <i class="bi bi-box-arrow-up-right"></i> Large Packet
+                    <span>LOW</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Last result log -->
+        <div id="injectLog" style="border-top:1px solid rgba(255,255,255,0.05);padding:10px 20px;font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--text-muted);min-height:36px;">
+            Ready — click a scenario to fire a simulated packet.
         </div>
     </div>
 </div>
 
-<!-- Charts row -->
-<div class="row g-3 mb-4">
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-graph-up me-2"></i>Traffic Volume</div>
-            <div class="card-body chart-container">
-                <canvas id="trafficChart"></canvas>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-pie-chart me-2"></i>Protocol Distribution</div>
-            <div class="card-body chart-container">
-                <canvas id="protocolChart"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- ══════════════════════════════════════════════
+     ROW 2 — Traffic Chart (left) + Right stack
+     ══════════════════════════════════════════════ -->
+<div class="row g-3 mb-3" style="align-items:stretch;">
 
-<!-- Recent alerts + Top Threat IPs -->
-<div class="row g-3">
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-exclamation-triangle me-2"></i>Recent Alerts</span>
-                <a href="/alerts" class="btn btn-sm btn-outline-info">View All</a>
+    <div class="col-lg-7">
+        <div class="card h-100 hover-lift" style="min-height:320px;">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-waveform" style="color:var(--neon-cyan);opacity:0.7;"></i>
+                <span>Network Traffic</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;letter-spacing:1px;color:var(--neon-cyan);background:rgba(0,255,204,0.06);padding:2px 8px;border-radius:4px;border:1px solid rgba(0,255,204,0.1);">LIVE</span>
+            </div>
+            <div class="card-body" style="position:relative;padding-bottom:12px;">
+                <canvas id="trafficChart" style="max-height:260px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5 d-flex flex-column gap-3">
+
+        <div class="card hover-lift" style="flex:1;min-height:150px;">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-pie-chart" style="color:var(--neon-purple);opacity:0.7;"></i>
+                Protocol Split
+            </div>
+            <div class="card-body" style="position:relative;max-height:200px;display:flex;align-items:center;justify-content:center;padding:8px 16px;">
+                <canvas id="protocolChart" style="max-height:180px;"></canvas>
+            </div>
+        </div>
+
+        <div class="card hover-lift" style="flex:1;">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span class="d-flex align-items-center gap-2">
+                    <i class="bi bi-crosshair" style="color:var(--neon-red);opacity:0.7;"></i>
+                    Threat IPs
+                </span>
+                <a href="/alerts" class="btn btn-sm" style="font-size:0.7rem;padding:2px 10px;background:rgba(0,255,204,0.05);color:var(--neon-cyan);border:1px solid rgba(0,255,204,0.12);border-radius:6px;">All →</a>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-dark table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>Time</th>
-                                <th>Type</th>
-                                <th>Source IP</th>
-                                <th>Severity</th>
-                                <th>Message</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recentAlertsBody">
-                            <tr><td colspan="5" class="text-center text-muted">Loading…</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+                <table style="display:none;"><tbody id="topThreatsBody"></tbody></table>
+                <div id="threatLeaderboard" style="padding:8px 0;"></div>
             </div>
         </div>
-    </div>
 
-    <!-- Top Threat IPs -->
-    <div class="col-lg-4">
-        <div class="card h-100">
-            <div class="card-header"><i class="bi bi-fire me-2"></i>Top Threat IPs</div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-dark table-sm mb-0">
-                        <thead>
-                            <tr>
-                                <th>IP Address</th>
-                                <th class="text-center">Alerts</th>
-                                <th class="text-center">HIGH</th>
-                            </tr>
-                        </thead>
-                        <tbody id="topThreatsBody">
-                            <tr><td colspan="3" class="text-center text-muted">No data yet</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
+
+<!-- ══════════════════════════════════════════════
+     ROW 3 — Alert Feed (log-stream style)
+     ══════════════════════════════════════════════ -->
+<div class="card hover-lift">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <span class="d-flex align-items-center gap-2">
+            <i class="bi bi-rss" style="color:var(--neon-yellow);opacity:0.7;"></i>
+            Alert Feed
+            <span id="alertFeedCount" style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--text-muted);background:rgba(255,255,255,0.04);padding:1px 8px;border-radius:4px;">—</span>
+        </span>
+        <a href="/alerts" class="btn btn-sm" style="font-size:0.7rem;padding:3px 12px;background:rgba(0,170,255,0.07);color:var(--neon-blue);border:1px solid rgba(0,170,255,0.12);border-radius:6px;">
+            View All Alerts <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <div id="alertFeed" style="max-height:340px;overflow-y:auto;">
+            <div style="padding:40px;text-align:center;">
+                <div style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);margin:0 auto 12px;"></div>
+                <div style="font-size:0.78rem;color:var(--text-muted);">Waiting for alerts…</div>
+            </div>
+        </div>
+        <table style="display:none;"><tbody id="recentAlertsBody"></tbody></table>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('dashboard.static', filename='js/charts.js') }}"></script>
 <script src="{{ url_for('dashboard.static', filename='js/dashboard.js') }}"></script>
+<script>
+(function() {
+    var SEV_STYLE = {
+        HIGH:   'border-left:3px solid var(--neon-red);',
+        MEDIUM: 'border-left:3px solid var(--neon-yellow);',
+        LOW:    'border-left:3px solid var(--neon-blue);',
+        INFO:   'border-left:3px solid rgba(255,255,255,0.08);'
+    };
+    var SEV_COLOR = {
+        HIGH: 'var(--neon-red)', MEDIUM: 'var(--neon-yellow)',
+        LOW: 'var(--neon-blue)', INFO: 'rgba(255,255,255,0.25)'
+    };
+    var TYPE_ICON = {
+        PORT_SCAN:'bi-radar', BRUTE_FORCE:'bi-key', TRAFFIC_SPIKE:'bi-graph-up-arrow',
+        SYN_SCAN:'bi-cursor', SUSPICIOUS_PORT:'bi-exclamation-diamond',
+        LARGE_PACKET:'bi-box-arrow-up-right', SYSTEM:'bi-cpu'
+    };
+
+    function renderFeed(alerts) {
+        var feed = document.getElementById('alertFeed');
+        var cnt  = document.getElementById('alertFeedCount');
+        if (!alerts || !alerts.length) {
+            feed.innerHTML = '<div style="padding:40px;text-align:center;"><div style="font-size:0.78rem;color:var(--text-muted);">No alerts yet</div></div>';
+            cnt.textContent = '0';
+            return;
+        }
+        cnt.textContent = alerts.length;
+        feed.innerHTML = alerts.slice(0, 10).map(function(a) {
+            var sev    = a.severity || 'INFO';
+            var border = SEV_STYLE[sev] || SEV_STYLE.INFO;
+            var col    = SEV_COLOR[sev]  || SEV_COLOR.INFO;
+            var icon   = TYPE_ICON[a.type] || 'bi-shield-exclamation';
+            var detailLink = (a.src_ip && a.src_ip !== 'N/A')
+                ? '<a href="/threat-detail?ip=' + encodeURIComponent(a.src_ip) + '" style="flex-shrink:0;color:var(--text-muted);font-size:0.8rem;" title="Threat detail"><i class="bi bi-box-arrow-up-right"></i></a>'
+                : '';
+            return '<div style="' + border + 'padding:10px 18px;display:flex;align-items:center;gap:14px;border-bottom:1px solid rgba(255,255,255,0.04);">'
+                + '<i class="bi ' + icon + '" style="font-size:1rem;color:' + col + ';opacity:0.85;flex-shrink:0;"></i>'
+                + '<div style="flex:1;min-width:0;">'
+                +   '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+                +     '<code style="font-size:0.76rem;color:var(--neon-cyan);">' + a.src_ip + '</code>'
+                +     '<span style="font-size:0.72rem;background:rgba(255,255,255,0.05);color:var(--text-secondary);padding:1px 7px;border-radius:4px;">' + a.type + '</span>'
+                +     '<span style="font-size:0.7rem;font-weight:600;color:' + col + ';">' + sev + '</span>'
+                +   '</div>'
+                +   '<div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + a.message + '</div>'
+                + '</div>'
+                + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.65rem;color:var(--text-muted);white-space:nowrap;flex-shrink:0;">' + a.timestamp + '</div>'
+                + detailLink
+                + '</div>';
+        }).join('');
+    }
+
+    function renderLeaderboard(threats) {
+        var lb = document.getElementById('threatLeaderboard');
+        if (!threats || !threats.length) {
+            lb.innerHTML = '<div style="padding:24px;text-align:center;"><i class="bi bi-shield-check" style="font-size:1.5rem;color:var(--text-muted);"></i><div style="font-size:0.75rem;color:var(--text-muted);margin-top:8px;">No threats detected</div></div>';
+            return;
+        }
+        var max = threats[0].total_alerts || 1;
+        lb.innerHTML = threats.slice(0, 6).map(function(t, i) {
+            var pct = Math.round((t.total_alerts / max) * 100);
+            var isHigh = t.high_alerts > 0;
+            var barColor = isHigh ? 'var(--neon-red)' : 'var(--neon-cyan)';
+            var barGlow  = isHigh ? 'rgba(255,59,92,0.4)' : 'rgba(0,255,204,0.3)';
+            var rankColor = i === 0 ? 'var(--neon-red)' : i === 1 ? 'var(--neon-yellow)' : 'var(--text-muted)';
+            var highBadge = isHigh ? '<span style="font-size:0.65rem;font-weight:700;color:var(--neon-red);background:rgba(255,59,92,0.1);padding:1px 6px;border-radius:4px;">' + t.high_alerts + ' HIGH</span>' : '';
+            return '<div style="padding:8px 16px;">'
+                + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">'
+                +   '<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.65rem;color:' + rankColor + ';width:16px;text-align:center;">#' + (i+1) + '</span>'
+                +   '<code style="font-size:0.76rem;color:var(--text-primary);flex:1;">' + t.ip + '</code>'
+                +   '<span style="font-size:0.7rem;color:var(--text-secondary);">' + t.total_alerts + ' alerts</span>'
+                +   highBadge
+                + '</div>'
+                + '<div style="height:3px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;">'
+                +   '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:2px;box-shadow:0 0 6px ' + barGlow + ';transition:width 0.6s ease;"></div>'
+                + '</div></div>';
+        }).join('');
+    }
+
+    var lastAlertHTML = '';
+    var lastThreatHTML = '';
+
+    function sync() {
+        var rows = document.querySelectorAll('#recentAlertsBody tr');
+        var alerts = Array.prototype.slice.call(rows).map(function(r) {
+            var cells = r.querySelectorAll('td');
+            if (cells.length < 5) return null;
+            return {
+                timestamp: cells[0].textContent,
+                type:      cells[1].textContent,
+                src_ip:    cells[2].textContent,
+                severity:  cells[3].textContent.trim(),
+                message:   cells[4].textContent
+            };
+        }).filter(Boolean);
+
+        var newH = JSON.stringify(alerts);
+        if (newH !== lastAlertHTML) { lastAlertHTML = newH; renderFeed(alerts); }
+
+        var trows = document.querySelectorAll('#topThreatsBody tr');
+        var threats = Array.prototype.slice.call(trows).map(function(r) {
+            var cells = r.querySelectorAll('td');
+            if (cells.length < 3) return null;
+            return {
+                ip:           cells[0].textContent,
+                total_alerts: parseInt(cells[1].textContent) || 0,
+                high_alerts:  parseInt(cells[2].textContent) || 0
+            };
+        }).filter(Boolean);
+
+        var newT = JSON.stringify(threats);
+        if (newT !== lastThreatHTML) { lastThreatHTML = newT; renderLeaderboard(threats); }
+    }
+
+    setInterval(sync, 1000);
+    sync();
+})();
+
+// ── Packet Injector ──
+function toggleInjector() {
+    var body = document.getElementById('injectorBody');
+    var chev = document.getElementById('injectorChevron');
+    var open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : 'block';
+    chev.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+function blockAction(action) {
+    var ip  = document.getElementById('blockIp').value.trim();
+    var fb  = document.getElementById('blockFeedback');
+    var log = document.getElementById('injectLog');
+    if (!ip) { fb.style.color='var(--neon-yellow)'; fb.textContent='Enter an IP first.'; return; }
+    fb.textContent = '';
+    fetch('/api/blocklist', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ip: ip, action: action})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if (d.error) {
+            fb.style.color = 'var(--neon-red)';
+            fb.textContent = d.error;
+        } else {
+            var col = action === 'block' ? 'var(--neon-red)' : 'var(--neon-cyan)';
+            fb.style.color = col;
+            fb.textContent = ip + (action === 'block' ? ' blocked.' : ' unblocked.');
+            log.innerHTML = '[' + new Date().toLocaleTimeString() + '] '
+                + '<span style="color:' + col + ';font-weight:700;">' + action.toUpperCase() + '</span>'
+                + ' &mdash; <code style="color:' + col + ';">' + ip + '</code>';
+        }
+    })
+    .catch(function(e){ fb.style.color='var(--neon-red)'; fb.textContent='Request failed: '+e; });
+}
+
+function quickBlock(ip) {
+    var log = document.getElementById('injectLog');
+    fetch('/api/blocklist', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ip: ip, action: 'block'})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if (d.error) {
+            log.innerHTML += ' <span style="color:var(--neon-red);">Block failed: ' + d.error + '</span>';
+        } else {
+            document.getElementById('blockIp').value = ip;
+            log.innerHTML = '[' + new Date().toLocaleTimeString() + '] '
+                + '<span style="color:var(--neon-red);font-weight:700;">BLOCKED</span>'
+                + ' &mdash; <code style="color:var(--neon-red);">' + ip + '</code>'
+                + ' &nbsp;<button onclick="quickUnblock(\'' + ip + '\')" style="margin-left:8px;background:rgba(0,255,204,0.07);border:1px solid rgba(0,255,204,0.25);color:var(--neon-cyan);border-radius:5px;padding:1px 10px;font-size:0.7rem;cursor:pointer;font-family:inherit;"><i class="bi bi-shield-check"></i> Unblock</button>';
+        }
+    });
+}
+
+function quickUnblock(ip) {
+    var log = document.getElementById('injectLog');
+    fetch('/api/blocklist', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ip: ip, action: 'unblock'})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        log.innerHTML = '[' + new Date().toLocaleTimeString() + '] '
+            + '<span style="color:var(--neon-cyan);font-weight:700;">UNBLOCKED</span>'
+            + ' &mdash; <code style="color:var(--neon-cyan);">' + ip + '</code>';
+    });
+}
+
+function inject(scenario) {
+    var ip = document.getElementById('injectIp').value.trim();
+    var fb = document.getElementById('injectFeedback');
+    var log = document.getElementById('injectLog');
+    var btn = document.querySelector('.inject-btn[data-scenario="' + scenario + '"]');
+
+    fb.style.color = 'var(--text-muted)';
+    fb.textContent = '';
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+
+    var body = ip ? JSON.stringify({scenario: scenario, src_ip: ip}) : JSON.stringify({scenario: scenario});
+
+    fetch('/api/simulate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: body
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        if (d.error) {
+            fb.style.color = 'var(--neon-red)';
+            fb.textContent = d.error;
+            log.innerHTML = '<span style="color:var(--neon-red);">ERROR: ' + d.error + '</span>';
+        } else {
+            var sevColor = {HIGH:'var(--neon-red)', MEDIUM:'var(--neon-yellow)', LOW:'var(--neon-blue)'}[d.severity] || 'var(--text-muted)';
+            fb.style.color = 'var(--neon-cyan)';
+            fb.textContent = 'Injected from ' + d.src_ip;
+            log.innerHTML = '[' + new Date().toLocaleTimeString() + '] '
+                + '<span style="color:' + sevColor + ';font-weight:700;">' + d.scenario + '</span>'
+                + ' from <code style="color:var(--neon-cyan);">' + d.src_ip + '</code>'
+                + ' &mdash; ' + d.message
+                + ' &nbsp;<button onclick="quickBlock(\'' + d.src_ip + '\')" style="margin-left:10px;background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.3);color:var(--neon-red);border-radius:5px;padding:1px 10px;font-size:0.7rem;cursor:pointer;font-family:inherit;"><i class="bi bi-shield-slash"></i> Block this IP</button>';
+        }
+    })
+    .catch(function(e) {
+        log.innerHTML = '<span style="color:var(--neon-red);">Request failed: ' + e + '</span>';
+    })
+    .finally(function() {
+        if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    });
+}
+</script>
 {% endblock %}

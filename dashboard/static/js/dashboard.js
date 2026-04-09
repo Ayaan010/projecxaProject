@@ -16,8 +16,9 @@
         fetch('/api/status')
             .then(r => r.json())
             .then(d => {
-                document.getElementById('idsStatus').textContent = d.running ? 'Running' : 'Stopped';
-                document.getElementById('idsStatus').className = 'stat-value ' + (d.running ? 'text-success' : 'text-danger');
+                const statusEl = document.getElementById('idsStatus');
+                statusEl.textContent = d.running ? 'Running' : 'Stopped';
+                statusEl.style.color = d.running ? 'var(--neon-green)' : 'var(--neon-red)';
                 document.getElementById('idsUptime').textContent = d.uptime ? 'Uptime: ' + d.uptime : '';
                 document.getElementById('totalPackets').textContent = d.total_packets.toLocaleString();
                 document.getElementById('totalAlerts').textContent = d.total_alerts.toLocaleString();

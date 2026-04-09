@@ -233,6 +233,59 @@ def api_blocklist_post():
     return jsonify({"status": "ok", "ip": ip, "action": action})
 
 
+@bp.route("/api/simulate", methods=["POST"])
+def api_simulate():
+    """Inject a synthetic alert into IDS state for testing/demo purposes.
+    Body: {"scenario": "PORT_SCAN"|"BRUTE_FORCE"|"SYN_SCAN"|"TRAFFIC_SPIKE"|"SUSPICIOUS_PORT"|"LARGE_PACKET", "src_ip": "x.x.x.x" (optional)}
+    """
+    import random as _rand
+
+    data = request.get_json(force=True) or {}
+    scenario = data.get("scenario", "").strip().upper()
+
+    SCENARIOS = {
+        "PORT_SCAN":       ("HIGH",   "Port scan detected from {ip} — {n} unique ports probed in 10s"),
+        "BRUTE_FORCE":     ("HIGH",   "Brute-force attempt from {ip} — {n} login attempts on port 22 in 10s"),
+        "SYN_SCAN":        ("MEDIUM", "SYN scan detected from {ip} — {n} SYN-only packets in 10s"),
+        "TRAFFIC_SPIKE":   ("HIGH",   "Traffic spike from {ip} — {n} packets in 5s (threshold: 100)"),
+        "SUSPICIOUS_PORT": ("MEDIUM", "Suspicious connection from {ip} to port {port} (known C2 port)"),
+        "LARGE_PACKET":    ("LOW",    "Oversized packet from {ip} — {size} bytes (threshold: 1600)"),
+    }
+
+    if scenario not in SCENARIOS:
+        return jsonify({"error": f"Unknown scenario. Valid: {list(SCENARIOS.keys())}"}), 400
+
+    # Validate or assign source IP
+    raw_ip = data.get("src_ip", "").strip()
+    if raw_ip and not re.match(r"^\d{1,3}(\.\d{1,3}){3}$", raw_ip):
+        return jsonify({"error": "Invalid src_ip format"}), 400
+    src_ip = raw_ip if raw_ip else f"10.{_rand.randint(0,255)}.{_rand.randint(0,255)}.{_rand.randint(1,254)}"
+
+    severity, msg_tpl = SCENARIOS[scenario]
+    message = msg_tpl.format(
+        ip=src_ip,
+        n=_rand.randint(20, 120),
+        port=_rand.choice([4444, 1337, 6666, 31337, 6667]),
+        size=_rand.randint(1601, 9000),
+    )
+
+    alert = {"type": scenario, "severity": severity, "src_ip": src_ip, "message": message}
+    ids_state.record_alert(alert)
+    # Also feed a burst of fake packets so the traffic chart moves
+    for _ in range(_rand.randint(5, 20)):
+        ids_state.record_packet(_rand.choice(["TCP", "UDP", "ICMP"]))
+
+    _db.insert_alert({
+        "alert_type": scenario, "severity": severity,
+        "source_ip": src_ip, "destination_ip": "10.0.0.1",
+        "source_port": _rand.randint(1024, 65535), "destination_port": 80,
+        "protocol": "TCP", "description": message, "raw_data": "",
+    })
+    _db.insert_system_log("SIMULATE", f"Manual simulation: {scenario} from {src_ip}", "INFO")
+
+    return jsonify({"status": "ok", "scenario": scenario, "src_ip": src_ip, "severity": severity, "message": message})
+
+
 @bp.route("/api/traffic")
 def api_traffic():
     return jsonify({

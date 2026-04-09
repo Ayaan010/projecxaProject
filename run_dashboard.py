@@ -149,12 +149,12 @@ def main():
     if demo_mode:
         config.DEMO_MODE    = True   # ensure routes/templates see the flag
         config.DEMO_NO_AUTH = True
-        print("[*] DEMO MODE — starting simulated IDS activity (no packet capture)…")
+        print("[*] DEMO MODE -- starting simulated IDS activity (no packet capture)...")
         from demo.demo_engine import run_demo
         _demo_db = DatabaseManager(config.DATABASE_PATH)
         threading.Thread(target=run_demo, args=(_demo_db,), daemon=True).start()
     elif with_ids:
-        print("[*] Starting IDS engine in background thread…")
+        print("[*] Starting IDS engine in background thread...")
         t = threading.Thread(target=start_ids_background, daemon=True)
         t.start()
     else:
@@ -165,9 +165,9 @@ def main():
     port = config.DASHBOARD_PORT
     display_host = "127.0.0.1" if host == "0.0.0.0" else host
     if demo_mode:
-        print(f"[*] Dashboard → http://{display_host}:{port}  (no login — demo mode)")
+        print(f"[*] Dashboard -> http://{display_host}:{port}  (no login -- demo mode)")
     else:
-        print(f"[*] Dashboard → http://{display_host}:{port}  (login: {config.DASHBOARD_USER})")
+        print(f"[*] Dashboard -> http://{display_host}:{port}  (login: {config.DASHBOARD_USER})")
     if host == "0.0.0.0":
         print(f"[*] Also accessible from other PCs at http://<this-machine-ip>:{port}")
     serve(app, host=host, port=port, threads=4)

@@ -1,28 +1,42 @@
 {% extends "base.html" %}
 
 {% block title %}Logs — IDS Dashboard{% endblock %}
-{% block page_title %}System Logs{% endblock %}
+{% block page_title %}
+<span style="display:inline-flex;align-items:center;gap:8px;">
+    <i class="bi bi-terminal" style="color:var(--neon-green);font-size:0.85rem;"></i>
+    System Logs
+</span>
+{% endblock %}
 
 {% block content %}
-<div class="row mb-3">
-    <div class="col-md-6">
-        <input type="text" id="logSearch" class="form-control bg-dark text-light border-secondary"
-               placeholder="Filter logs…">
+<div class="row g-3 mb-3 align-items-center">
+    <div class="col-md-5">
+        <div style="position:relative;">
+            <i class="bi bi-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:0.8rem;"></i>
+            <input type="text" id="logSearch" class="form-control" placeholder="Filter logs…" style="padding-left:34px;">
+        </div>
     </div>
-    <div class="col-md-3">
-        <div class="form-check form-switch mt-2">
+    <div class="col-md-4">
+        <div class="form-check form-switch d-flex align-items-center gap-2 mt-1">
             <input class="form-check-input" type="checkbox" id="autoRefresh" checked>
-            <label class="form-check-label text-light" for="autoRefresh">Auto-refresh (5 s)</label>
+            <label class="form-check-label" for="autoRefresh" style="font-size:0.82rem;">
+                Auto-refresh
+                <span style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--text-muted);margin-left:4px;">5s</span>
+            </label>
         </div>
     </div>
     <div class="col-md-3 text-end">
-        <button class="btn btn-outline-info" id="refreshLogs">
+        <button class="btn btn-outline-info btn-sm" id="refreshLogs">
             <i class="bi bi-arrow-clockwise me-1"></i>Refresh Now
         </button>
     </div>
 </div>
 
 <div class="card">
+    <div class="card-header d-flex align-items-center gap-2" style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;letter-spacing:1px;color:var(--text-muted);">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--neon-green);box-shadow:0 0 6px var(--neon-green);"></span>
+        TERMINAL OUTPUT
+    </div>
     <div class="card-body p-0">
         <pre class="log-viewer" id="logViewer">Loading…</pre>
     </div>

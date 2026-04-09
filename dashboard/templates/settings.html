@@ -1,28 +1,36 @@
 {% extends "base.html" %}
 
 {% block title %}Settings — IDS Dashboard{% endblock %}
-{% block page_title %}Settings{% endblock %}
+{% block page_title %}
+<span style="display:inline-flex;align-items:center;gap:8px;">
+    <i class="bi bi-gear" style="color:var(--neon-purple);font-size:0.85rem;"></i>
+    Settings
+</span>
+{% endblock %}
 
 {% block content %}
 <form id="settingsForm">
     <!-- Rule Engine -->
-    <div class="card mb-4">
-        <div class="card-header"><i class="bi bi-sliders me-2"></i>Rule Engine Thresholds</div>
+    <div class="card mb-4 hover-lift">
+        <div class="card-header d-flex align-items-center gap-2">
+            <i class="bi bi-sliders" style="color:var(--neon-cyan);opacity:0.7;"></i>
+            Rule Engine Thresholds
+        </div>
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Port Scan Threshold</label>
-                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                    <input type="number" class="form-control"
                            name="PORT_SCAN_THRESHOLD" value="{{ config.get('PORT_SCAN_THRESHOLD', 15) }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Brute Force Threshold</label>
-                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                    <input type="number" class="form-control"
                            name="BRUTE_FORCE_THRESHOLD" value="{{ config.get('BRUTE_FORCE_THRESHOLD', 10) }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Time Window (seconds)</label>
-                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                    <input type="number" class="form-control"
                            name="TIME_WINDOW" value="{{ config.get('TIME_WINDOW', 10) }}">
                 </div>
             </div>
@@ -30,23 +38,26 @@
     </div>
 
     <!-- Anomaly Engine -->
-    <div class="card mb-4">
-        <div class="card-header"><i class="bi bi-activity me-2"></i>Anomaly Detection</div>
+    <div class="card mb-4 hover-lift">
+        <div class="card-header d-flex align-items-center gap-2">
+            <i class="bi bi-activity" style="color:var(--neon-yellow);opacity:0.7;"></i>
+            Anomaly Detection
+        </div>
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Packet Rate Threshold</label>
-                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                    <input type="number" class="form-control"
                            name="PACKET_RATE_THRESHOLD" value="{{ config.get('PACKET_RATE_THRESHOLD', 100) }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Traffic Time Window (s)</label>
-                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                    <input type="number" class="form-control"
                            name="TRAFFIC_TIME_WINDOW" value="{{ config.get('TRAFFIC_TIME_WINDOW', 5) }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Large Packet Size (bytes)</label>
-                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                    <input type="number" class="form-control"
                            name="LARGE_PACKET_SIZE" value="{{ config.get('LARGE_PACKET_SIZE', 1500) }}">
                 </div>
             </div>
@@ -54,18 +65,21 @@
     </div>
 
     <!-- Performance -->
-    <div class="card mb-4">
-        <div class="card-header"><i class="bi bi-cpu me-2"></i>Performance</div>
+    <div class="card mb-4 hover-lift">
+        <div class="card-header d-flex align-items-center gap-2">
+            <i class="bi bi-cpu" style="color:var(--neon-green);opacity:0.7;"></i>
+            Performance
+        </div>
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label">Max Tracked IPs</label>
-                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                    <input type="number" class="form-control"
                            name="MAX_TRACKED_IPS" value="{{ config.get('MAX_TRACKED_IPS', 10000) }}">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Cleanup Interval (s)</label>
-                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                    <input type="number" class="form-control"
                            name="CLEANUP_INTERVAL" value="{{ config.get('CLEANUP_INTERVAL', 60) }}">
                 </div>
             </div>
@@ -73,10 +87,13 @@
     </div>
 
     <!-- Toggles -->
-    <div class="card mb-4">
-        <div class="card-header"><i class="bi bi-toggles me-2"></i>Flags</div>
+    <div class="card mb-4 hover-lift">
+        <div class="card-header d-flex align-items-center gap-2">
+            <i class="bi bi-toggles" style="color:var(--neon-pink);opacity:0.7;"></i>
+            Flags
+        </div>
         <div class="card-body">
-            <div class="row g-3">
+            <div class="row g-4">
                 <div class="col-md-3">
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" name="ENABLE_CONSOLE_ALERTS"
@@ -109,10 +126,12 @@
         </div>
     </div>
 
-    <button type="submit" class="btn btn-primary px-4">
-        <i class="bi bi-save me-1"></i>Save Settings
-    </button>
-    <span id="saveStatus" class="ms-3"></span>
+    <div class="d-flex align-items-center gap-3">
+        <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-save me-1"></i>Save Settings
+        </button>
+        <span id="saveStatus"></span>
+    </div>
 </form>
 {% endblock %}
 
@@ -137,7 +156,7 @@
         });
 
         const statusEl = document.getElementById('saveStatus');
-        statusEl.innerHTML = '<span class="text-info">Saving…</span>';
+        statusEl.innerHTML = '<span style="color:var(--neon-cyan);font-size:0.82rem;"><i class="bi bi-hourglass-split me-1"></i>Saving…</span>';
 
         fetch('/api/settings', {
             method: 'POST',
@@ -147,14 +166,14 @@
         .then(r => r.json())
         .then(d => {
             if (d.status === 'ok') {
-                statusEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Saved</span>';
+                statusEl.innerHTML = '<span style="color:var(--neon-green);font-size:0.82rem;"><i class="bi bi-check-circle me-1"></i>Saved successfully</span>';
             } else {
-                statusEl.innerHTML = `<span class="text-danger">${d.error || 'Error'}</span>`;
+                statusEl.innerHTML = `<span style="color:var(--neon-red);font-size:0.82rem;">${d.error || 'Error'}</span>`;
             }
             setTimeout(() => statusEl.innerHTML = '', 3000);
         })
         .catch(() => {
-            statusEl.innerHTML = '<span class="text-danger">Network error</span>';
+            statusEl.innerHTML = '<span style="color:var(--neon-red);font-size:0.82rem;">Network error</span>';
         });
     });
 </script>

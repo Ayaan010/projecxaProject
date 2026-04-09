@@ -1,7 +1,12 @@
 {% extends "base.html" %}
 
 {% block title %}Threat Detail — {{ ip }}{% endblock %}
-{% block page_title %}Threat Detail{% endblock %}
+{% block page_title %}
+<span style="display:inline-flex;align-items:center;gap:8px;">
+    <i class="bi bi-bullseye" style="color:var(--neon-red);font-size:0.85rem;"></i>
+    Threat Detail
+</span>
+{% endblock %}
 
 {% block content %}
 
@@ -11,56 +16,54 @@
         <i class="bi bi-arrow-left me-1"></i>Back to Alerts
     </a>
     <div>
-        <h4 class="mb-0">
-            <i class="bi bi-bullseye me-2 text-danger"></i>
-            <span id="ipTitle">{{ ip or 'Loading…' }}</span>
+        <h4 class="mb-0" style="color:var(--text-primary);">
+            <i class="bi bi-bullseye me-2" style="color:var(--neon-red);"></i>
+            <span id="ipTitle" style="font-family:'JetBrains Mono',monospace;">{{ ip or 'Loading…' }}</span>
         </h4>
         <small class="text-muted">Live threat intelligence for this source IP</small>
     </div>
 </div>
 
 <!-- Loading / not found state -->
-<div id="notFoundMsg" style="display:none;" class="alert alert-warning">
-    <i class="bi bi-question-circle me-2"></i>
-    No alerts recorded for this IP in the current session or database. It may have been cleared.
+<div id="notFoundMsg" style="display:none;" class="card mb-4" >
+    <div class="card-body d-flex align-items-center gap-2" style="border-left:3px solid var(--neon-yellow);">
+        <i class="bi bi-question-circle" style="color:var(--neon-yellow);"></i>
+        <span class="text-muted" style="font-size:0.88rem;">No alerts recorded for this IP in the current session or database. It may have been cleared.</span>
+    </div>
 </div>
 
 <!-- ── Status bar ── -->
 <div class="row g-3 mb-4" id="statCards" style="display:none;">
     <div class="col-xl-3 col-md-6">
-        <div class="card stat-card border-start-danger">
+        <div class="card hover-lift" style="border-left:3px solid var(--neon-red);">
             <div class="card-body">
-                <div class="stat-label">Total Alerts</div>
-                <div class="stat-value" id="statTotal">—</div>
+                <div class="text-muted" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;">Total Alerts</div>
+                <div class="fw-bold fs-4" id="statTotal" style="color:var(--text-primary);">—</div>
             </div>
-            <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
         </div>
     </div>
     <div class="col-xl-3 col-md-6">
-        <div class="card stat-card border-start-warning">
+        <div class="card hover-lift" style="border-left:3px solid var(--neon-yellow);">
             <div class="card-body">
-                <div class="stat-label">HIGH Severity</div>
-                <div class="stat-value text-danger" id="statHigh">—</div>
+                <div class="text-muted" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;">HIGH Severity</div>
+                <div class="fw-bold fs-4" id="statHigh" style="color:var(--neon-red);">—</div>
             </div>
-            <div class="stat-icon"><i class="bi bi-radioactive"></i></div>
         </div>
     </div>
     <div class="col-xl-3 col-md-6">
-        <div class="card stat-card border-start-info">
+        <div class="card hover-lift" style="border-left:3px solid var(--neon-cyan);">
             <div class="card-body">
-                <div class="stat-label">First Seen</div>
-                <div class="stat-value fs-6" id="statFirst">—</div>
+                <div class="text-muted" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;">First Seen</div>
+                <div class="fw-bold fs-6" id="statFirst" style="color:var(--text-primary);font-family:'JetBrains Mono',monospace;">—</div>
             </div>
-            <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
         </div>
     </div>
     <div class="col-xl-3 col-md-6">
-        <div class="card stat-card border-start-primary">
+        <div class="card hover-lift" style="border-left:3px solid var(--neon-purple);">
             <div class="card-body">
-                <div class="stat-label">IP Status</div>
-                <div class="stat-value fs-6" id="statStatus">—</div>
+                <div class="text-muted" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;">IP Status</div>
+                <div class="fw-bold fs-6" id="statStatus" style="color:var(--text-primary);">—</div>
             </div>
-            <div class="stat-icon"><i class="bi bi-shield"></i></div>
         </div>
     </div>
 </div>
@@ -71,8 +74,11 @@
 
     <!-- Alert-type breakdown chart -->
     <div class="col-lg-4">
-        <div class="card h-100">
-            <div class="card-header"><i class="bi bi-bar-chart me-2"></i>Alert Types from This IP</div>
+        <div class="card h-100 hover-lift">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-bar-chart" style="color:var(--neon-cyan);opacity:0.7;"></i>
+                Alert Types from This IP
+            </div>
             <div class="card-body chart-container">
                 <canvas id="typeBreakdownChart"></canvas>
             </div>
@@ -81,9 +87,10 @@
 
     <!-- Threat intel + block action panel -->
     <div class="col-lg-8">
-        <div class="card h-100" id="threatExplainCard">
-            <div class="card-header" id="explainHeader">
-                <i class="bi bi-info-circle me-2"></i>What is happening with this IP?
+        <div class="card h-100 hover-lift" id="threatExplainCard">
+            <div class="card-header d-flex align-items-center gap-2" id="explainHeader">
+                <i class="bi bi-info-circle" style="color:var(--neon-purple);opacity:0.7;"></i>
+                What is happening with this IP?
             </div>
             <div class="card-body" id="explainBody">
                 <p class="text-muted">Loading analysis…</p>
@@ -94,8 +101,11 @@
 </div>
 
 <!-- ── Block / Unblock action card ── -->
-<div class="card mb-4" id="actionCard">
-    <div class="card-header"><i class="bi bi-shield-lock me-2"></i>Action — Block / Unblock This IP</div>
+<div class="card mb-4 hover-lift" id="actionCard">
+    <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-shield-lock" style="color:var(--neon-green);opacity:0.7;"></i>
+        Action — Block / Unblock This IP
+    </div>
     <div class="card-body">
         <div class="row g-4 align-items-start">
 
@@ -137,16 +147,19 @@
 </div>
 
 <!-- ── Full alert history for this IP ── -->
-<div class="card mb-4">
+<div class="card mb-4 hover-lift">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-clock-history me-2"></i>Full Alert History for This IP</span>
+        <span class="d-flex align-items-center gap-2">
+            <i class="bi bi-clock-history" style="color:var(--neon-cyan);opacity:0.7;"></i>
+            Full Alert History for This IP
+        </span>
         <button class="btn btn-sm btn-outline-secondary" id="refreshBtn">
             <i class="bi bi-arrow-clockwise"></i> Refresh
         </button>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-dark table-hover table-sm mb-0">
+            <table class="table table-hover table-sm mb-0">
                 <thead>
                     <tr>
                         <th>Timestamp</th>
@@ -316,9 +329,9 @@ const THREAT_KB = {
 
 const SEVERITY_CLASS = {HIGH:'danger', MEDIUM:'warning', LOW:'info', INFO:'secondary'};
 const TYPE_COLORS = {
-    PORT_SCAN:'#dc3545', BRUTE_FORCE:'#c82333', TRAFFIC_SPIKE:'#e83e8c',
-    SYN_SCAN:'#ffc107', SUSPICIOUS_PORT:'#fd7e14',
-    LARGE_PACKET:'#0dcaf0', SYSTEM:'#6c757d'
+    PORT_SCAN:'#ff3b5c', BRUTE_FORCE:'#a855f7', TRAFFIC_SPIKE:'#e83e8c',
+    SYN_SCAN:'#fbbf24', SUSPICIOUS_PORT:'#fd7e14',
+    LARGE_PACKET:'#00ffcc', SYSTEM:'#6c757d'
 };
 
 // Extract IP from URL
@@ -334,13 +347,27 @@ const typeChart = new Chart(chartCtx, {
     data: { labels: [], datasets: [{ data: [], backgroundColor: [] }] },
     options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position:'bottom', labels:{ color:'#ccc', padding:8 } } }
+        plugins: {
+            legend: { position:'bottom', labels:{ color:'rgba(255,255,255,0.55)', padding:8, font:{family:'JetBrains Mono', size:10} } },
+            tooltip:{
+                backgroundColor:'rgba(15,17,25,0.95)', titleColor:'#00ffcc',
+                bodyColor:'rgba(255,255,255,0.8)', borderColor:'rgba(0,255,204,0.15)', borderWidth:1,
+                titleFont:{family:'JetBrains Mono'}, bodyFont:{family:'JetBrains Mono'},
+                padding:10, cornerRadius:8
+            }
+        }
     }
 });
 
 function severityBadge(sev) {
-    const cls = SEVERITY_CLASS[sev] || 'secondary';
-    return `<span class="badge bg-${cls}">${sev}</span>`;
+    const map = {
+        HIGH:   'background:rgba(255,59,92,0.15);color:var(--neon-red)',
+        MEDIUM: 'background:rgba(251,191,36,0.15);color:var(--neon-yellow)',
+        LOW:    'background:rgba(0,170,255,0.15);color:var(--neon-blue)',
+        INFO:   'background:rgba(255,255,255,0.06);color:var(--text-secondary)'
+    };
+    const style = map[sev] || map.INFO;
+    return `<span class="badge" style="${style};font-size:0.68rem;">${sev}</span>`;
 }
 
 function renderExplainPanel(detail) {
@@ -361,9 +388,9 @@ function renderExplainPanel(detail) {
         return;
     }
 
-    header.innerHTML = `<i class="bi ${kb.icon} me-2 text-${kb.color}"></i>
-        <span class="badge bg-${kb.color} me-2">${kb.severity}</span>
-        Analysis: <strong>${kb.title}</strong>`;
+    header.innerHTML = `<i class="bi ${kb.icon} me-2" style="color:var(--neon-${kb.color === 'danger' ? 'red' : kb.color === 'warning' ? 'yellow' : 'blue'});opacity:0.7;"></i>
+        ${severityBadge(kb.severity)}
+        <span class="ms-2">Analysis: <strong>${kb.title}</strong></span>`;
 
     // Build causes list + alert type summary
     const typeRows = Object.entries(tc)
@@ -390,7 +417,7 @@ function renderExplainPanel(detail) {
             </div>
             <div class="col-md-6">
                 <h6 class="text-info small"><i class="bi bi-list-check me-1"></i>Alert types detected from this IP</h6>
-                <table class="table table-dark table-sm small mb-0">
+                <table class="table table-sm small mb-0">
                     <thead><tr><th>Type</th><th class="text-center">Severity</th><th class="text-center">Count</th></tr></thead>
                     <tbody>${typeRows}</tbody>
                 </table>
@@ -442,17 +469,17 @@ function updateBlockButton(detail) {
         blockBtn.style.display   = 'none';
         unblockBtn.style.display = '';
         note.textContent = 'This IP is currently blocked — all packets from it are dropped.';
-        statusEl.innerHTML = '<span class="text-danger"><i class="bi bi-slash-circle me-1"></i>Blocked</span>';
+        statusEl.innerHTML = '<span style="color:var(--neon-red);"><i class="bi bi-slash-circle me-1"></i>Blocked</span>';
     } else if (detail.is_pending) {
         blockBtn.style.display   = 'none';
         unblockBtn.style.display = 'none';
         note.textContent = 'A block request is pending — check the notification banner at the top of the page.';
-        statusEl.innerHTML = '<span class="text-warning"><i class="bi bi-hourglass-split me-1"></i>Block Pending</span>';
+        statusEl.innerHTML = '<span style="color:var(--neon-yellow);"><i class="bi bi-hourglass-split me-1"></i>Block Pending</span>';
     } else {
         blockBtn.style.display   = '';
         unblockBtn.style.display = 'none';
         note.textContent = 'Blocking is session-only and can be undone at any time.';
-        statusEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Active (not blocked)</span>';
+        statusEl.innerHTML = '<span style="color:var(--neon-green);"><i class="bi bi-check-circle me-1"></i>Active (not blocked)</span>';
     }
 }
 

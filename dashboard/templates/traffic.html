@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 
 {% block title %}Traffic — IDS Dashboard{% endblock %}
-{% block page_title %}Traffic Monitor{% endblock %}
+{% block page_title %}
+<span style="display:inline-flex;align-items:center;gap:8px;">
+    <i class="bi bi-graph-up" style="color:var(--neon-cyan);font-size:0.85rem;"></i>
+    Traffic Monitor
+</span>
+{% endblock %}
 
 {% block content %}
 <div class="row g-3 mb-4">
     <div class="col-xl-4 col-md-6">
-        <div class="card stat-card border-start-info">
+        <div class="card stat-card border-start-info hover-lift">
             <div class="card-body">
                 <div class="stat-label">Total Packets</div>
                 <div class="stat-value" id="trafTotalPkts">0</div>
@@ -15,7 +20,7 @@
         </div>
     </div>
     <div class="col-xl-4 col-md-6">
-        <div class="card stat-card border-start-primary">
+        <div class="card stat-card border-start-primary hover-lift">
             <div class="card-body">
                 <div class="stat-label">TCP Packets</div>
                 <div class="stat-value" id="trafTcp">0</div>
@@ -24,7 +29,7 @@
         </div>
     </div>
     <div class="col-xl-4 col-md-12">
-        <div class="card stat-card border-start-warning">
+        <div class="card stat-card border-start-warning hover-lift">
             <div class="card-body">
                 <div class="stat-label">UDP Packets</div>
                 <div class="stat-value" id="trafUdp">0</div>
@@ -36,16 +41,23 @@
 
 <div class="row g-3 mb-4">
     <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-bar-chart me-2"></i>Traffic Volume Over Time</div>
+        <div class="card hover-lift">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-bar-chart" style="color:var(--neon-cyan);opacity:0.7;"></i>
+                Traffic Volume Over Time
+                <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--text-muted);background:rgba(0,255,204,0.06);padding:2px 8px;border-radius:4px;">LIVE</span>
+            </div>
             <div class="card-body chart-container">
                 <canvas id="trafficLineChart"></canvas>
             </div>
         </div>
     </div>
     <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-pie-chart me-2"></i>Protocol Breakdown</div>
+        <div class="card hover-lift">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-pie-chart" style="color:var(--neon-purple);opacity:0.7;"></i>
+                Protocol Breakdown
+            </div>
             <div class="card-body chart-container">
                 <canvas id="protocolDoughnut"></canvas>
             </div>
@@ -55,8 +67,11 @@
 
 <div class="row g-3">
     <div class="col-12">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-bar-chart-steps me-2"></i>Protocol Comparison</div>
+        <div class="card hover-lift">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-bar-chart-steps" style="color:var(--neon-yellow);opacity:0.7;"></i>
+                Protocol Comparison
+            </div>
             <div class="card-body chart-container">
                 <canvas id="protocolBar"></canvas>
             </div>
@@ -67,22 +82,43 @@
 
 {% block scripts %}
 <script>
-    const PROTO_COLORS = {TCP:'#0dcaf0', UDP:'#ffc107', ICMP:'#198754', OTHER:'#6c757d'};
+    const PROTO_COLORS = {TCP:'#00ffcc', UDP:'#fbbf24', ICMP:'#22d55a', OTHER:'#5b6178'};
+    const GRID = 'rgba(255,255,255,0.04)';
+    const TICK = '#5b6178';
+    const tooltipStyle = {
+        backgroundColor: 'rgba(15,17,25,0.9)',
+        borderColor: 'rgba(0,255,204,0.2)',
+        borderWidth: 1,
+        padding: 12,
+        cornerRadius: 8,
+    };
 
     // ---- Traffic line chart ----
     const lineCtx = document.getElementById('trafficLineChart').getContext('2d');
+    const lineGrad = lineCtx.createLinearGradient(0, 0, 0, 280);
+    lineGrad.addColorStop(0, 'rgba(0,255,204,0.15)');
+    lineGrad.addColorStop(1, 'rgba(0,255,204,0)');
+
     const trafficLineChart = new Chart(lineCtx, {
         type: 'line',
         data: { labels: [], datasets: [{
             label: 'Packets',
             data: [],
-            borderColor: '#0dcaf0',
-            backgroundColor: 'rgba(13,202,240,0.1)',
-            fill: true, tension: 0.3
+            borderColor: '#00ffcc',
+            backgroundColor: lineGrad,
+            fill: true, tension: 0.4,
+            pointRadius: 0, pointHoverRadius: 6,
+            pointHoverBackgroundColor: '#00ffcc',
+            pointHoverBorderColor: '#0f1119',
+            pointHoverBorderWidth: 3,
+            borderWidth: 2
         }]},
         options: { responsive: true, maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, grid:{color:'#333'} }, x: { grid:{color:'#222'} } },
-            plugins: { legend:{display:false} }
+            scales: {
+                y: { beginAtZero: true, grid:{color:GRID,drawBorder:false}, ticks:{color:TICK,font:{size:10,family:"'JetBrains Mono',monospace"}}, border:{display:false} },
+                x: { grid:{color:GRID,drawBorder:false}, ticks:{color:TICK,font:{size:10,family:"'JetBrains Mono',monospace"},maxTicksLimit:12}, border:{display:false} }
+            },
+            plugins: { legend:{display:false}, tooltip:tooltipStyle }
         }
     });
 
@@ -90,9 +126,9 @@
     const doughCtx = document.getElementById('protocolDoughnut').getContext('2d');
     const protocolDoughnut = new Chart(doughCtx, {
         type: 'doughnut',
-        data: { labels: [], datasets: [{ data: [], backgroundColor: [] }] },
-        options: { responsive: true, maintainAspectRatio: false,
-            plugins:{ legend:{ position:'bottom', labels:{color:'#ccc'} } }
+        data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth:0, hoverOffset:8 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout:'70%',
+            plugins:{ legend:{ position:'bottom', labels:{color:'#9ca3af', padding:14, usePointStyle:true, pointStyleWidth:8, font:{size:11,family:"'JetBrains Mono',monospace"}} }, tooltip:tooltipStyle }
         }
     });
 
@@ -100,10 +136,13 @@
     const barCtx = document.getElementById('protocolBar').getContext('2d');
     const protocolBar = new Chart(barCtx, {
         type: 'bar',
-        data: { labels: [], datasets: [{ label: 'Packets', data: [], backgroundColor: [] }] },
+        data: { labels: [], datasets: [{ label: 'Packets', data: [], backgroundColor: [], borderRadius:6, borderSkipped:false }] },
         options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y',
-            scales: { x: { beginAtZero: true, grid:{color:'#333'} }, y: { grid:{display:false} } },
-            plugins: { legend:{display:false} }
+            scales: {
+                x: { beginAtZero: true, grid:{color:GRID,drawBorder:false}, ticks:{color:TICK,font:{size:10,family:"'JetBrains Mono',monospace"}}, border:{display:false} },
+                y: { grid:{display:false}, ticks:{color:'#9ca3af',font:{size:11,family:"'JetBrains Mono',monospace"}}, border:{display:false} }
+            },
+            plugins: { legend:{display:false}, tooltip:tooltipStyle }
         }
     });
 
@@ -124,7 +163,7 @@
             // protocol charts
             const labels = Object.keys(proto);
             const values = Object.values(proto);
-            const colors = labels.map(l => PROTO_COLORS[l] || '#6c757d');
+            const colors = labels.map(l => PROTO_COLORS[l] || '#5b6178');
 
             protocolDoughnut.data.labels = labels;
             protocolDoughnut.data.datasets[0].data = values;

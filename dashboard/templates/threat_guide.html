@@ -1,41 +1,53 @@
 {% extends "base.html" %}
 
 {% block title %}Threat Guide — IDS Dashboard{% endblock %}
-{% block page_title %}Threat Guide{% endblock %}
+{% block page_title %}
+<span style="display:inline-flex;align-items:center;gap:8px;">
+    <i class="bi bi-book" style="color:var(--neon-purple);font-size:0.85rem;"></i>
+    Threat Guide
+</span>
+{% endblock %}
 
 {% block content %}
 
 <!-- Intro banner -->
-<div class="alert alert-info d-flex gap-3 align-items-start mb-4">
-    <i class="bi bi-info-circle-fill fs-4 mt-1"></i>
-    <div>
-        <strong>What is this page?</strong><br>
-        This guide explains every <span class="badge bg-danger">HIGH</span> severity alert your IDS can raise —
-        what caused it, what an attacker might be doing, and exactly what happens when you block that IP.
+<div class="card mb-4 hover-lift" style="border-left:3px solid var(--neon-cyan);">
+    <div class="card-body d-flex gap-3 align-items-start">
+        <i class="bi bi-info-circle-fill fs-4 mt-1" style="color:var(--neon-cyan);opacity:0.7;"></i>
+        <div>
+            <strong style="color:var(--text-primary);">What is this page?</strong><br>
+            <span class="text-muted" style="font-size:0.88rem;">
+                This guide explains every <span class="badge" style="background:rgba(255,59,92,0.15);color:var(--neon-red);font-size:0.68rem;">HIGH</span> severity alert your IDS can raise —
+                what caused it, what an attacker might be doing, and exactly what happens when you block that IP.
+            </span>
+        </div>
     </div>
 </div>
 
 <!-- Quick nav pills -->
 <div class="d-flex flex-wrap gap-2 mb-4">
-    <a href="#port-scan"     class="btn btn-sm btn-outline-danger">Port Scan</a>
-    <a href="#brute-force"   class="btn btn-sm btn-outline-danger">Brute Force</a>
-    <a href="#traffic-spike" class="btn btn-sm btn-outline-danger">Traffic Spike</a>
-    <a href="#syn-scan"      class="btn btn-sm btn-outline-warning">SYN Scan</a>
-    <a href="#susp-port"     class="btn btn-sm btn-outline-warning">Suspicious Port</a>
-    <a href="#large-packet"  class="btn btn-sm btn-outline-info">Large Packet</a>
-    <a href="#block-effects" class="btn btn-sm btn-outline-secondary">Blocking Effects</a>
+    <a href="#port-scan"     class="btn btn-sm" style="background:rgba(255,59,92,0.1);color:var(--neon-red);border:1px solid rgba(255,59,92,0.2);">Port Scan</a>
+    <a href="#brute-force"   class="btn btn-sm" style="background:rgba(255,59,92,0.1);color:var(--neon-red);border:1px solid rgba(255,59,92,0.2);">Brute Force</a>
+    <a href="#traffic-spike" class="btn btn-sm" style="background:rgba(255,59,92,0.1);color:var(--neon-red);border:1px solid rgba(255,59,92,0.2);">Traffic Spike</a>
+    <a href="#syn-scan"      class="btn btn-sm" style="background:rgba(251,191,36,0.1);color:var(--neon-yellow);border:1px solid rgba(251,191,36,0.2);">SYN Scan</a>
+    <a href="#susp-port"     class="btn btn-sm" style="background:rgba(251,191,36,0.1);color:var(--neon-yellow);border:1px solid rgba(251,191,36,0.2);">Suspicious Port</a>
+    <a href="#large-packet"  class="btn btn-sm" style="background:rgba(0,170,255,0.1);color:var(--neon-blue);border:1px solid rgba(0,170,255,0.2);">Large Packet</a>
+    <a href="#block-effects" class="btn btn-sm" style="background:rgba(255,255,255,0.04);color:var(--text-secondary);border:1px solid rgba(255,255,255,0.08);">Blocking Effects</a>
 </div>
 
 <!-- ═══════════════════════════════════════════════════
      HIGH SEVERITY
 ═══════════════════════════════════════════════════ -->
-<h5 class="text-danger mb-3"><i class="bi bi-radioactive me-2"></i>HIGH Severity Alerts</h5>
+<h5 class="mb-3" style="color:var(--neon-red);"><i class="bi bi-radioactive me-2"></i>HIGH Severity Alerts</h5>
+
+<!-- HIGH SEVERITY -->
+<h5 class="mb-3" style="color:var(--neon-red);"><i class="bi bi-radioactive me-2"></i>HIGH Severity Alerts</h5>
 
 <!-- PORT SCAN -->
-<div class="card mb-4 border-danger" id="port-scan">
-    <div class="card-header bg-danger bg-opacity-10 d-flex align-items-center gap-2">
-        <span class="badge bg-danger">HIGH</span>
-        <i class="bi bi-radar"></i>
+<div class="card mb-4 hover-lift" id="port-scan" style="border-left:3px solid var(--neon-red);">
+    <div class="card-header d-flex align-items-center gap-2">
+        <span class="badge" style="background:rgba(255,59,92,0.15);color:var(--neon-red);font-size:0.68rem;">HIGH</span>
+        <i class="bi bi-radar" style="color:var(--neon-red);opacity:0.7;"></i>
         <strong>PORT_SCAN — Port Scan Detected</strong>
     </div>
     <div class="card-body">
@@ -82,10 +94,10 @@
 </div>
 
 <!-- BRUTE FORCE -->
-<div class="card mb-4 border-danger" id="brute-force">
-    <div class="card-header bg-danger bg-opacity-10 d-flex align-items-center gap-2">
-        <span class="badge bg-danger">HIGH</span>
-        <i class="bi bi-key"></i>
+<div class="card mb-4 hover-lift" id="brute-force" style="border-left:3px solid var(--neon-red);">
+    <div class="card-header d-flex align-items-center gap-2">
+        <span class="badge" style="background:rgba(255,59,92,0.15);color:var(--neon-red);font-size:0.68rem;">HIGH</span>
+        <i class="bi bi-key" style="color:var(--neon-red);opacity:0.7;"></i>
         <strong>BRUTE_FORCE — Brute Force Attack</strong>
     </div>
     <div class="card-body">
@@ -141,10 +153,10 @@
 </div>
 
 <!-- TRAFFIC SPIKE -->
-<div class="card mb-4 border-danger" id="traffic-spike">
-    <div class="card-header bg-danger bg-opacity-10 d-flex align-items-center gap-2">
-        <span class="badge bg-danger">HIGH</span>
-        <i class="bi bi-graph-up-arrow"></i>
+<div class="card mb-4 hover-lift" id="traffic-spike" style="border-left:3px solid var(--neon-red);">
+    <div class="card-header d-flex align-items-center gap-2">
+        <span class="badge" style="background:rgba(255,59,92,0.15);color:var(--neon-red);font-size:0.68rem;">HIGH</span>
+        <i class="bi bi-graph-up-arrow" style="color:var(--neon-red);opacity:0.7;"></i>
         <strong>TRAFFIC_SPIKE — High Traffic Rate</strong>
     </div>
     <div class="card-body">
@@ -198,13 +210,13 @@
 <!-- ═══════════════════════════════════════════════════
      MEDIUM SEVERITY
 ═══════════════════════════════════════════════════ -->
-<h5 class="text-warning mb-3 mt-2"><i class="bi bi-exclamation-diamond me-2"></i>MEDIUM Severity Alerts</h5>
+<h5 class="mb-3 mt-2" style="color:var(--neon-yellow);"><i class="bi bi-exclamation-diamond me-2"></i>MEDIUM Severity Alerts</h5>
 
 <!-- SYN SCAN -->
-<div class="card mb-4 border-warning" id="syn-scan">
-    <div class="card-header bg-warning bg-opacity-10 d-flex align-items-center gap-2">
-        <span class="badge bg-warning text-dark">MEDIUM</span>
-        <i class="bi bi-cursor"></i>
+<div class="card mb-4 hover-lift" id="syn-scan" style="border-left:3px solid var(--neon-yellow);">
+    <div class="card-header d-flex align-items-center gap-2">
+        <span class="badge" style="background:rgba(251,191,36,0.15);color:var(--neon-yellow);font-size:0.68rem;">MEDIUM</span>
+        <i class="bi bi-cursor" style="color:var(--neon-yellow);opacity:0.7;"></i>
         <strong>SYN_SCAN — TCP SYN Scan</strong>
     </div>
     <div class="card-body">
@@ -247,10 +259,10 @@
 </div>
 
 <!-- SUSPICIOUS PORT -->
-<div class="card mb-4 border-warning" id="susp-port">
-    <div class="card-header bg-warning bg-opacity-10 d-flex align-items-center gap-2">
-        <span class="badge bg-warning text-dark">MEDIUM</span>
-        <i class="bi bi-exclamation-diamond"></i>
+<div class="card mb-4 hover-lift" id="susp-port" style="border-left:3px solid var(--neon-yellow);">
+    <div class="card-header d-flex align-items-center gap-2">
+        <span class="badge" style="background:rgba(251,191,36,0.15);color:var(--neon-yellow);font-size:0.68rem;">MEDIUM</span>
+        <i class="bi bi-exclamation-diamond" style="color:var(--neon-yellow);opacity:0.7;"></i>
         <strong>SUSPICIOUS_PORT — Known Malware Port</strong>
     </div>
     <div class="card-body">
@@ -261,7 +273,7 @@
                 <p class="text-muted small">
                     Traffic was detected going to a port from a hardcoded suspicious list:
                 </p>
-                <table class="table table-dark table-sm small mb-0">
+                <table class="table table-sm small mb-0">
                     <thead><tr><th>Port</th><th>Known for</th></tr></thead>
                     <tbody>
                         <tr><td>4444</td><td>Metasploit Framework default shell</td></tr>
@@ -302,13 +314,13 @@
 <!-- ═══════════════════════════════════════════════════
      LOW SEVERITY
 ═══════════════════════════════════════════════════ -->
-<h5 class="text-info mb-3 mt-2"><i class="bi bi-info-circle me-2"></i>LOW Severity Alerts</h5>
+<h5 class="mb-3 mt-2" style="color:var(--neon-blue);"><i class="bi bi-info-circle me-2"></i>LOW Severity Alerts</h5>
 
 <!-- LARGE PACKET -->
-<div class="card mb-4 border-info" id="large-packet">
-    <div class="card-header bg-info bg-opacity-10 d-flex align-items-center gap-2">
-        <span class="badge bg-info text-dark">LOW</span>
-        <i class="bi bi-box-arrow-up-right"></i>
+<div class="card mb-4 hover-lift" id="large-packet" style="border-left:3px solid var(--neon-blue);">
+    <div class="card-header d-flex align-items-center gap-2">
+        <span class="badge" style="background:rgba(0,170,255,0.15);color:var(--neon-blue);font-size:0.68rem;">LOW</span>
+        <i class="bi bi-box-arrow-up-right" style="color:var(--neon-blue);opacity:0.7;"></i>
         <strong>LARGE_PACKET — Unusually Large Packet</strong>
     </div>
     <div class="card-body">
@@ -355,9 +367,9 @@
 <!-- ═══════════════════════════════════════════════════
      BLOCKING EFFECTS SUMMARY
 ═══════════════════════════════════════════════════ -->
-<div class="card border-secondary mb-4" id="block-effects">
+<div class="card hover-lift mb-4" id="block-effects" style="border-left:3px solid var(--neon-purple);">
     <div class="card-header d-flex align-items-center gap-2">
-        <i class="bi bi-shield-lock"></i>
+        <i class="bi bi-shield-lock" style="color:var(--neon-purple);opacity:0.7;"></i>
         <strong>What exactly happens when you block an IP?</strong>
     </div>
     <div class="card-body">
@@ -397,16 +409,19 @@
 </div>
 
 <!-- Live HIGH alerts from current session -->
-<div class="card mb-4">
+<div class="card mb-4 hover-lift">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-radioactive me-2"></i>Current HIGH Alerts in This Session</span>
+        <span class="d-flex align-items-center gap-2">
+            <i class="bi bi-radioactive" style="color:var(--neon-red);opacity:0.7;"></i>
+            Current HIGH Alerts in This Session
+        </span>
         <button class="btn btn-sm btn-outline-secondary" id="refreshHighAlerts">
             <i class="bi bi-arrow-clockwise"></i> Refresh
         </button>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-dark table-hover table-sm mb-0">
+            <table class="table table-hover table-sm mb-0">
                 <thead>
                     <tr>
                         <th>Timestamp</th>
