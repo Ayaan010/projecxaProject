@@ -94,7 +94,7 @@ def api_status():
 @bp.route("/api/alerts")
 def api_alerts():
     # Try in-memory alerts first; fall back to database
-    alerts = ids_state.get_recent_alerts(limit=200)
+    alerts = ids_state.get_recent_alerts(limit=600)
     if not alerts:
         with _db.get_connection() as conn:
             cursor = conn.cursor()
