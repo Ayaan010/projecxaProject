@@ -17,9 +17,9 @@ INTERFACE = "Wi-Fi"  # Change back from Ethernet
 # RULE ENGINE SETTINGS
 # ================================
 
-PORT_SCAN_THRESHOLD = 15        # unique ports in TIME_WINDOW seconds
-BRUTE_FORCE_THRESHOLD = 10      # connection attempts in TIME_WINDOW seconds
-SYN_SCAN_THRESHOLD = 20         # SYN-only packets in TIME_WINDOW seconds
+PORT_SCAN_THRESHOLD = 50        # unique ports in TIME_WINDOW seconds
+BRUTE_FORCE_THRESHOLD = 30      # connection attempts in TIME_WINDOW seconds
+SYN_SCAN_THRESHOLD = 50         # SYN-only packets in TIME_WINDOW seconds
 TIME_WINDOW = 10
 
 SUSPICIOUS_PORTS = {
@@ -46,7 +46,7 @@ SUSPICIOUS_PORTS = {
 # ANOMALY ENGINE SETTINGS
 # ================================
 
-PACKET_RATE_THRESHOLD = 100     # packets per TRAFFIC_TIME_WINDOW seconds from one IP
+PACKET_RATE_THRESHOLD = 500     # packets per TRAFFIC_TIME_WINDOW seconds from one IP
 TRAFFIC_TIME_WINDOW = 5
 # Ethernet MTU is 1500 bytes for the payload, but Scapy's len(packet) includes
 # all headers (Ethernet 14 B + IP 20 B + TCP 20 B = ~54 B overhead).

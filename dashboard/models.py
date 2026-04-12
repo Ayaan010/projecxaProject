@@ -38,7 +38,7 @@ class IDSState:
 
         # Recent alerts for quick display
         self.recent_alerts = []   # list of dicts
-        self.MAX_ALERTS = 200
+        self.MAX_ALERTS = 600
 
         # Traffic volume snapshots: list of (timestamp, packet_count)
         self.traffic_snapshots = []

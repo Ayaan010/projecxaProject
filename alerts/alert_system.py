@@ -23,39 +23,39 @@ class AlertSystem:
             format="%(asctime)s - %(levelname)s - %(message)s"
         )
 
-        # severity mapping
+        # severity mapping (updated for higher thresholds)
         self.severity_levels = {
-            "PORT_SCAN": "HIGH",
-            "BRUTE_FORCE": "HIGH",
-            "SYN_SCAN": "MEDIUM",
-            "TRAFFIC_SPIKE": "HIGH",
+            "PORT_SCAN": "MEDIUM",      # Now only triggers for 50+ ports in 10s
+            "BRUTE_FORCE": "MEDIUM",   # Now only triggers for 30+ attempts in 10s
+            "SYN_SCAN": "MEDIUM",      # Now only triggers for 50+ SYNs in 10s
+            "TRAFFIC_SPIKE": "HIGH",   # Still high, as 500+ packets in 5s is rare
             "SUSPICIOUS_PORT": "MEDIUM",
             "LARGE_PACKET": "LOW",
             "SYSTEM": "INFO"
         }
 
-        # Plain-English descriptions shown in the dashboard UI
+        # Plain-English descriptions shown in the dashboard UI (updated for new thresholds)
         self.alert_descriptions = {
             "PORT_SCAN": (
-                "A single IP is probing many different ports rapidly. "
+                "A single IP is probing a very large number of ports rapidly. "
                 "Attackers do this to find open services they can exploit. "
-                "Triggered when one IP hits more than 15 unique ports."
+                "Triggered when one IP hits more than 50 unique ports in 10 seconds."
             ),
             "BRUTE_FORCE": (
                 "An IP is sending a very high number of connection attempts "
                 "to authentication ports (SSH, RDP, FTP, etc.) in a short time. "
-                "This usually means an automated password-guessing attack."
+                "Now only triggers for 30+ attempts in 10 seconds."
             ),
             "SYN_SCAN": (
                 "An unusually high number of TCP SYN-only packets are being received "
-                "from one IP in a short window (more than 20 SYN packets in 10 seconds). "
+                "from one IP in a short window (more than 50 SYN packets in 10 seconds). "
                 "Normal connections send one SYN then complete the handshake — "
                 "a scanner repeatedly sends SYN without ever completing the connection "
                 "to silently map which ports are open."
             ),
             "TRAFFIC_SPIKE": (
-                "One IP is sending an unusually large number of packets in a very "
-                "short window (more than 100 packets in 5 seconds). This could indicate "
+                "One IP is sending an extremely large number of packets in a very "
+                "short window (more than 500 packets in 5 seconds). This could indicate "
                 "a flood/DoS attack or a misconfigured device. "
                 "After 3 HIGH alerts the IP is automatically blocked."
             ),
